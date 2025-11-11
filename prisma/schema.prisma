@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Pic {
+  id                    Int                   @id @default(autoincrement())
+  platform              String                @db.VarChar(50)
+  affectedPartNumbers   String                @map("affected_part_numbers") @db.VarChar(50)
+  partNumbersText       String?               @map("part_numbers_text") @db.Text
+  temporaryPermanent    String                @map("temporary_permanent") @db.VarChar(50)
+  temporaryType         String?               @map("temporary_type") @db.VarChar(50)
+  piecesTimeDateNumber  String?               @map("pieces_time_date_number") @db.VarChar(100)
+  originationDate       DateTime              @map("origination_date") @db.Date
+  implementationDate    DateTime              @map("implementation_date") @db.Date
+  affectedOperations    String                @map("affected_operations") @db.VarChar(255)
+  revisionReason        String                @map("revision_reason") @db.Text
+  status                String?               @db.VarChar(50)
+  createdBy             Int?                  @map("created_by")
+  createdAt             DateTime?             @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt             DateTime?             @updatedAt @map("updated_at") @db.Timestamp(0)
+  
+  procedureSteps        PicProcedureStep[]
+  documents             PicDocument[]
+  validations           PicValidation[]
+  approvals             PicApproval[]
+  availability          PicAvailability?
+  changeReason          PicChangeReason?
+
+  @@map("pics")
+}
+
+model PicProcedureStep {
+  id                Int      @id @default(autoincrement())
+  picId             Int      @map("pic_id")
+  stepOrder         Int      @map("step_order")
+  stepDescription   String   @map("step_description") @db.Text
+  responsible       String   @db.VarChar(100)
+  date              DateTime @db.Date
+  
+  pic               Pic      @relation(fields: [picId], references: [id], onDelete: Cascade)
+
+  @@map("pic_procedure_steps")
+}
+
+model PicDocument {
+  id            Int      @id @default(autoincrement())
+  picId         Int      @map("pic_id")
+  documentType  String   @map("document_type") @db.VarChar(100)
+  responsible   String   @db.VarChar(100)
+  date          DateTime @db.Date
+  
+  pic           Pic      @relation(fields: [picId], references: [id], onDelete: Cascade)
+
+  @@map("pic_documents")
+}
+
+model PicValidation {
+  id                      Int      @id @default(autoincrement())
+  picId                   Int      @map("pic_id")
+  validationDescription   String   @map("validation_description") @db.Text
+  responsible             String   @db.VarChar(100)
+  date                    DateTime @db.Date
+  
+  pic                     Pic      @relation(fields: [picId], references: [id], onDelete: Cascade)
+
+  @@map("pic_validations")
+}
+
+model PicApproval {
+  id              Int       @id @default(autoincrement())
+  picId           Int       @map("pic_id")
+  approverId      String    @map("approver_id") @db.VarChar(100)
+  approvalStatus  String?   @map("approval_status") @db.VarChar(50)
+  comment         String?   @db.Text
+  responseDate    DateTime? @map("response_date") @db.Timestamp(0)
+  
+  pic             Pic       @relation(fields: [picId], references: [id], onDelete: Cascade)
+
+  @@map("pic_approvals")
+}
+
+model PicAvailability {
+  id            Int     @id @default(autoincrement())
+  picId         Int     @unique @map("pic_id")
+  fixtures      Boolean?
+  testEquipment Boolean? @map("test_equipment")
+  other         String?  @db.Text
+  
+  pic           Pic     @relation(fields: [picId], references: [id], onDelete: Cascade)
+
+  @@map("pic_availability")
+}
+
+model PicChangeReason {
+  id            Int     @id @default(autoincrement())
+  picId         Int     @unique @map("pic_id")
+  safety        Boolean?
+  delivery      Boolean?
+  productivity  Boolean?
+  quality       Boolean?
+  cost          Boolean?
+  process       Boolean?
+  other         String?  @db.Text
+  
+  pic           Pic     @relation(fields: [picId], references: [id], onDelete: Cascade)
+
+  @@map("pic_change_reason")
+}
