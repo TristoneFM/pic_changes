@@ -65,10 +65,13 @@ export function useGetPic(id) {
 
 // Get subareas by area ID (defaults to area ID 4)
 export function useGetSubareas(areaId = 4) {
+  // Ensure areaId is a valid number
+  const validAreaId = areaId && !isNaN(areaId) ? parseInt(areaId) : 4;
+  
   return useQuery({
-    queryKey: ['subareas', areaId],
+    queryKey: ['subareas', validAreaId],
     queryFn: async () => {
-      const response = await fetch(`/api/areas?areaId=${areaId}`);
+      const response = await fetch(`/api/areas?areaId=${validAreaId}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch subareas');
@@ -77,6 +80,7 @@ export function useGetSubareas(areaId = 4) {
       const data = await response.json();
       return data.data;
     },
+    enabled: !!validAreaId, // Only run query if areaId is valid
   });
 }
 

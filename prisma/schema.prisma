@@ -12,6 +12,7 @@ datasource db {
 
 model Pic {
   id                    Int                   @id @default(autoincrement())
+  affectedArea          Int?                  @map("affected_area")
   platform              String                @db.VarChar(50)
   affectedPartNumbers   String                @map("affected_part_numbers") @db.VarChar(50)
   partNumbersText       String?               @map("part_numbers_text") @db.Text

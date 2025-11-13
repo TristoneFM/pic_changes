@@ -73,22 +73,55 @@ export default function ProcedureStepsStep({
                 fullWidth
                 select
                 label="Responsable"
-                value={step.responsable}
+                value={step.responsable || ''}
                 onChange={handleStepChange(index, 'responsable')}
                 required
                 disabled={isLoadingEmpleados}
                 sx={{ flex: 1 }}
+                SelectProps={{
+                  displayEmpty: true,
+                }}
+                onFocus={() => {
+                  console.log('Responsable dropdown focused. Current value:', step.responsable, 'Type:', typeof step.responsable);
+                  console.log('Available empleados:', empleados.map(e => ({ id: e.emp_id, idStr: String(e.emp_id), alias: e.emp_alias })));
+                }}
               >
                 {isLoadingEmpleados ? (
                   <MenuItem disabled>
                     <CircularProgress size={20} />
                   </MenuItem>
+                ) : empleados.length === 0 ? (
+                  <MenuItem value="" disabled>
+                    No hay empleados disponibles
+                  </MenuItem>
                 ) : (
-                  empleados.map((empleado) => (
-                    <MenuItem key={empleado.emp_id} value={empleado.emp_id.toString()}>
-                      {empleado.emp_alias}
-                    </MenuItem>
-                  ))
+                  (() => {
+                    // Check if current value exists in empleados
+                    const currentValue = String(step.responsable || '');
+                    const valueExists = empleados.some(emp => String(emp.emp_id) === currentValue);
+                    
+                    if (currentValue && !valueExists) {
+                      console.warn('Responsable value not found in empleados:', currentValue, 'Available IDs:', empleados.map(e => String(e.emp_id)));
+                    }
+                    
+                    return [
+                      <MenuItem key="placeholder" value="" disabled>
+                        Seleccionar responsable
+                      </MenuItem>,
+                      ...empleados.map((empleado) => {
+                        const empIdStr = String(empleado.emp_id);
+                        // Debug: log if this matches the current value
+                        if (step.responsable === empIdStr) {
+                          console.log('✅ Matched responsable:', empIdStr, 'with alias:', empleado.emp_alias);
+                        }
+                        return (
+                          <MenuItem key={empleado.emp_id} value={empIdStr}>
+                            {empleado.emp_alias}
+                          </MenuItem>
+                        );
+                      })
+                    ];
+                  })()
                 )}
               </TextField>
               <TextField

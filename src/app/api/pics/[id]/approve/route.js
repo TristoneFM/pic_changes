@@ -5,12 +5,14 @@ export async function PATCH(request, { params }) {
   try {
     // Handle params - in Next.js 15+, params is a Promise
     let id;
+    let resolvedParams;
     if (params && typeof params.then === 'function') {
       // params is a Promise (Next.js 15+)
-      const resolvedParams = await params;
+      resolvedParams = await params;
       id = resolvedParams?.id;
     } else if (params && typeof params === 'object') {
       // params is directly available (Next.js 13-14)
+      resolvedParams = params;
       id = params.id;
     } else {
       // Try to get id from URL as fallback
@@ -19,7 +21,7 @@ export async function PATCH(request, { params }) {
       id = pathParts[pathParts.indexOf('pics') + 1];
     }
     
-    console.log('Approval API - params:', params);
+    console.log('Approval API - resolved params:', resolvedParams);
     console.log('Approval API - extracted id:', id);
     
     if (!id) {

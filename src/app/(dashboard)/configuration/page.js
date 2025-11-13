@@ -215,12 +215,6 @@ export default function ConfigurationPage() {
     handleCloseAreaDialog();
   };
 
-  const handleDeleteArea = (areaId) => {
-    if (window.confirm('¿Está seguro de que desea eliminar esta área?')) {
-      setAreas(areas.filter(area => area.id !== areaId));
-    }
-  };
-
   const handleOpenEditApprover = (areaId, approver) => {
     setEditingApprover(approver);
     setEditingApproverAreaId(areaId);
@@ -328,23 +322,13 @@ export default function ConfigurationPage() {
                             <Typography variant="h6" sx={{ fontWeight: 500 }}>
                               {area.name}
                             </Typography>
-                            <Box>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleOpenEditArea(area)}
-                                color="primary"
-                                sx={{ mr: 1 }}
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleDeleteArea(area.id)}
-                                color="error"
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenEditArea(area)}
+                              color="primary"
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
                           </Box>
 
                           <Divider sx={{ mb: 2 }} />

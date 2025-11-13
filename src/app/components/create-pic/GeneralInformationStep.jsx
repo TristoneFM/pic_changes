@@ -14,6 +14,8 @@ import {
 import { useGetSubareas } from '@/hooks/usePics';
 
 export default function GeneralInformationStep({ formData, handleChange, errors = {}, areas = [] }) {
+  // Load all subareas (platforms are not dependent on area selection)
+  // Using default area ID 4 to load all available platforms
   const { data: subareas = [], isLoading: isLoadingSubareas } = useGetSubareas(4);
 
   return (
@@ -32,7 +34,7 @@ export default function GeneralInformationStep({ formData, handleChange, errors 
           displayEmpty: true,
         }}
       >
- 
+  
         {areas.map((area) => (
           <MenuItem key={area.id} value={area.id.toString()}>
             {area.name}
@@ -60,11 +62,14 @@ export default function GeneralInformationStep({ formData, handleChange, errors 
             <CircularProgress size={20} />
           </MenuItem>
         ) : (
-          subareas.map((subarea) => (
-            <MenuItem key={subarea.id_subarea} value={subarea.subarea}>
-              {subarea.subarea}
-            </MenuItem>
-          ))
+          [
+        
+            ...subareas.map((subarea) => (
+              <MenuItem key={subarea.id_subarea} value={subarea.subarea}>
+                {subarea.subarea}
+              </MenuItem>
+            ))
+          ]
         )}
       </TextField>
 

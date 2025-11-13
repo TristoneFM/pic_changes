@@ -9,7 +9,7 @@ export async function POST(request) {
 
     // Extract data from request
     const {
-      //areaAfectada,
+      areaAfectada,
       plataforma,
       numerosParteAfectados,
       numerosParteTexto,
@@ -63,11 +63,23 @@ export async function POST(request) {
     );
 
     // Create PIC with all related data using Prisma transaction
-    // Note: affectedArea field needs to be added to database schema
+    // Safely parse areaAfectada - ensure it's a valid integer
+    let affectedAreaValue = null;
+    if (areaAfectada && areaAfectada !== '') {
+      const parsed = parseInt(areaAfectada);
+      // Validate it's a valid number (not NaN)
+      if (!isNaN(parsed)) {
+        affectedAreaValue = parsed;
+      }
+    }
+    
+    // Log for debugging
+    console.log('areaAfectada received:', areaAfectada, 'parsed value:', affectedAreaValue);
+    
     const pic = await prisma.pic.create({
       data: {
+        affectedArea: affectedAreaValue,
         platform: plataforma,
-        // affectedArea: areaAfectada, // TODO: Add this field to database schema
         affectedPartNumbers: numerosParteAfectados,
         partNumbersText: numerosParteTexto || null,
         temporaryPermanent: temporalDefinitivo,

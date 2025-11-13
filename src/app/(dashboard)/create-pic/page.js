@@ -92,8 +92,18 @@ export default function CreatePicPage() {
   const transformPicToForm = useCallback((pic) => {
     if (!pic) return null;
     
+    // Get the affected area - convert to string to match dropdown format
+    let areaAfectadaValue = '';
+    if (pic.affectedArea !== undefined && pic.affectedArea !== null) {
+      // If affectedArea exists, use it (convert to string to match dropdown format)
+      areaAfectadaValue = String(pic.affectedArea);
+    } else if (pic.affected_area !== undefined && pic.affected_area !== null) {
+      // Try snake_case version (in case it's stored that way in raw queries)
+      areaAfectadaValue = String(pic.affected_area);
+    }
+    
     return {
-      areaAfectada: pic.affectedArea || '',
+      areaAfectada: areaAfectadaValue,
       plataforma: pic.platform || '',
       numerosParteAfectados: pic.affectedPartNumbers || 'todos',
       numerosParteTexto: pic.partNumbersText || '',
@@ -109,9 +119,28 @@ export default function CreatePicPage() {
             .sort((a, b) => a.stepOrder - b.stepOrder)
             .map(step => {
               // Ensure responsable is a string (emp_id) for the dropdown
-              const responsableId = step.responsable 
-                ? (typeof step.responsable === 'string' ? step.responsable : String(step.responsable))
-                : '';
+              // Note: Prisma returns 'responsible' (English) from database
+              const responsableValue = step.responsible || step.responsable || '';
+              
+              // The dropdown uses emp_id.toString(), so we need to ensure exact match
+              let responsableId = '';
+              if (responsableValue) {
+                // Convert to number first, then to string to ensure format matches
+                const num = typeof responsableValue === 'string' 
+                  ? parseInt(responsableValue.trim(), 10)
+                  : Number(responsableValue);
+                // Only use if it's a valid number
+                if (!isNaN(num) && num > 0) {
+                  responsableId = String(num);
+                } else {
+                  // Fallback: use as string if it's not a number
+                  responsableId = String(responsableValue).trim();
+                }
+              }
+              
+              // Log the raw data from database
+              console.log('Raw DB step.responsible:', step.responsible, 'step.responsable:', step.responsable, 'Type:', typeof step.responsible);
+              console.log('Transformed responsableId:', responsableId, 'Type:', typeof responsableId);
               
               return {
                 paso: step.stepDescription || '',
@@ -123,9 +152,26 @@ export default function CreatePicPage() {
       documentos: pic.documents && pic.documents.length > 0
         ? pic.documents.map(doc => {
             // Ensure responsable is a string (emp_id) for the dropdown
-            const responsableId = doc.responsable 
-              ? (typeof doc.responsable === 'string' ? doc.responsable : String(doc.responsable))
-              : '';
+            // Note: Prisma returns 'responsible' (English) from database
+            const responsableValue = doc.responsible || doc.responsable || '';
+            
+            // The dropdown uses emp_id.toString(), so we need to ensure exact match
+            let responsableId = '';
+            if (responsableValue) {
+              // Convert to number first, then to string to ensure format matches
+              const num = typeof responsableValue === 'string' 
+                ? parseInt(responsableValue.trim(), 10)
+                : Number(responsableValue);
+              // Only use if it's a valid number
+              if (!isNaN(num) && num > 0) {
+                responsableId = String(num);
+              } else {
+                // Fallback: use as string if it's not a number
+                responsableId = String(responsableValue).trim();
+              }
+            }
+            
+            console.log('Document responsible:', doc.responsible, 'doc.responsable:', doc.responsable, '-> transformed:', responsableId);
             
             return {
               tipo: doc.documentType || '',
@@ -137,9 +183,26 @@ export default function CreatePicPage() {
       validaciones: pic.validations && pic.validations.length > 0
         ? pic.validations.map(val => {
             // Ensure responsable is a string (emp_id) for the dropdown
-            const responsableId = val.responsable 
-              ? (typeof val.responsable === 'string' ? val.responsable : String(val.responsable))
-              : '';
+            // Note: Prisma returns 'responsible' (English) from database
+            const responsableValue = val.responsible || val.responsable || '';
+            
+            // The dropdown uses emp_id.toString(), so we need to ensure exact match
+            let responsableId = '';
+            if (responsableValue) {
+              // Convert to number first, then to string to ensure format matches
+              const num = typeof responsableValue === 'string' 
+                ? parseInt(responsableValue.trim(), 10)
+                : Number(responsableValue);
+              // Only use if it's a valid number
+              if (!isNaN(num) && num > 0) {
+                responsableId = String(num);
+              } else {
+                // Fallback: use as string if it's not a number
+                responsableId = String(responsableValue).trim();
+              }
+            }
+            
+            console.log('Validation responsible:', val.responsible, 'val.responsable:', val.responsable, '-> transformed:', responsableId);
             
             return {
               validacion: val.validationDescription || '',
@@ -242,6 +305,10 @@ export default function CreatePicPage() {
     if (isEditMode && picData && !isLoadingPicData && empleados.length > 0) {
       const formData = transformPicToForm(picData);
       if (formData) {
+        console.log('Populating form with data:', formData);
+        console.log('Pasos procedimiento responsables:', formData.pasosProcedimiento?.map(p => ({ paso: p.paso, responsable: p.responsable, tipo: typeof p.responsable })));
+        console.log('Documentos responsables:', formData.documentos?.map(d => ({ tipo: d.tipo, responsable: d.responsable, tipoVal: typeof d.responsable })));
+        console.log('Validaciones responsables:', formData.validaciones?.map(v => ({ validacion: v.validacion, responsable: v.responsable, tipoVal: typeof v.responsable })));
         reset(formData);
         setIsLoadingPic(false);
       }
@@ -259,6 +326,13 @@ export default function CreatePicPage() {
   const aprobacionesRequeridas = watch('aprobacionesRequeridas');
   const disponibilidad = watch('disponibilidad');
   const motivoCambio = watch('motivoCambio');
+  
+  // Debug: Log form values when they change
+  useEffect(() => {
+    if (isEditMode && pasosProcedimiento) {
+      console.log('Current pasosProcedimiento form values:', pasosProcedimiento);
+    }
+  }, [isEditMode, pasosProcedimiento]);
   
   // Track previous area to handle changes
   const [previousAreaId, setPreviousAreaId] = useState(null);

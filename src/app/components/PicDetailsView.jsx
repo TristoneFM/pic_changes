@@ -17,11 +17,12 @@ import {
   Tooltip,
 } from '@mui/material';
 import { PictureAsPdf as PdfIcon, Visibility as VisibilityIcon, Description as DescriptionIcon } from '@mui/icons-material';
-import { useGetEmpleados, useCheckPdfExists } from '@/hooks/usePics';
+import { useGetEmpleados, useCheckPdfExists, useGetConfiguration } from '@/hooks/usePics';
 import PdfViewerModal from './PdfViewerModal';
 
 export default function PicDetailsView({ pic, isLoading }) {
   const { data: empleados = [] } = useGetEmpleados();
+  const { data: areas = [] } = useGetConfiguration();
   const [openPdfModal, setOpenPdfModal] = useState(false);
   const { data: pdfExists = false } = useCheckPdfExists(pic?.id);
 
@@ -36,6 +37,13 @@ export default function PicDetailsView({ pic, isLoading }) {
     const empId = parseInt(employeeId);
     const empleado = empleados.find(emp => emp.emp_id === empId);
     return empleado?.emp_alias || employeeId;
+  };
+
+  const getAreaName = (areaId) => {
+    if (!areaId) return '';
+    const areaIdNum = typeof areaId === 'string' ? parseInt(areaId) : areaId;
+    const area = areas.find(a => a.id === areaIdNum);
+    return area?.name || areaId;
   };
 
   const getStatusColor = (status) => {
@@ -399,6 +407,14 @@ export default function PicDetailsView({ pic, isLoading }) {
             Información General
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <TextField
+              fullWidth
+              label="Área Afectada"
+              value={getAreaName(pic.affectedArea)}
+              InputProps={{ readOnly: true }}
+              variant="outlined"
+            />
+
             <TextField
               fullWidth
               label="Plataforma"
