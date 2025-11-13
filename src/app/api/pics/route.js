@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { sendPicCreatedEmail, constructEmailFromUsername } from '@/lib/email';
+import { sendPicCreatedEmail, sendPicApprovalRequestEmail, getEmailFromEmpId } from '@/lib/email';
 import prismaEmpleados from '@/lib/prismaEmpleados';
 
 export async function POST(request) {
@@ -168,43 +168,130 @@ export async function POST(request) {
       },
     });
 
-    // Send email notification to the creator
-    if (createdBy) {
+    // Send email notifications asynchronously (don't wait for completion)
+    (async () => {
       try {
-        // Get creator's username/alias from database
-        const empleado = await prismaEmpleados.$queryRaw`
-          SELECT emp_alias 
+        // Get all empleados to look up email addresses
+        const allEmpleados = await prismaEmpleados.$queryRaw`
+          SELECT emp_id, emp_alias 
           FROM del_empleados 
-          WHERE emp_id = ${createdBy}
-          LIMIT 1
+          WHERE emp_alias IS NOT NULL AND emp_alias != ''
         `;
 
-        if (empleado && empleado.length > 0) {
-          const empAlias = empleado[0].emp_alias;
-          const emailDomain = process.env.EMAIL_DOMAIN;
+        const emailDomain = process.env.EMAIL_DOMAIN || 'tristone.com';
+        const emailAddresses = new Set(); // Use Set to avoid duplicates
+        const approverEmails = new Set(); // Separate set for approvers
+        let creatorName = 'Usuario';
+
+        // 1. Add creator email
+        if (createdBy) {
+          const creatorEmail = getEmailFromEmpId(createdBy, allEmpleados, emailDomain);
+          if (creatorEmail) {
+            emailAddresses.add(creatorEmail);
+            const creator = allEmpleados.find(emp => emp.emp_id === createdBy);
+            if (creator) creatorName = creator.emp_alias;
+          }
+        }
+
+        // 2. Collect approver emails separately
+        if (pic.approvals && pic.approvals.length > 0) {
+          pic.approvals.forEach(approval => {
+            const approverId = parseInt(approval.approverId);
+            if (!isNaN(approverId)) {
+              const approverEmail = getEmailFromEmpId(approverId, allEmpleados, emailDomain);
+              if (approverEmail) {
+                approverEmails.add(approverEmail);
+                emailAddresses.add(approverEmail); // Also add to general list
+              }
+            }
+          });
+        }
+
+        // 3. Add responsable emails from procedure steps
+        if (pic.procedureSteps && pic.procedureSteps.length > 0) {
+          pic.procedureSteps.forEach(step => {
+            const responsableId = parseInt(step.responsible);
+            if (!isNaN(responsableId)) {
+              const responsableEmail = getEmailFromEmpId(responsableId, allEmpleados, emailDomain);
+              if (responsableEmail) {
+                emailAddresses.add(responsableEmail);
+              }
+            }
+          });
+        }
+
+        // 4. Add responsable emails from documents
+        if (pic.documents && pic.documents.length > 0) {
+          pic.documents.forEach(doc => {
+            const responsableId = parseInt(doc.responsible);
+            if (!isNaN(responsableId)) {
+              const responsableEmail = getEmailFromEmpId(responsableId, allEmpleados, emailDomain);
+              if (responsableEmail) {
+                emailAddresses.add(responsableEmail);
+              }
+            }
+          });
+        }
+
+        // 5. Add responsable emails from validations
+        if (pic.validations && pic.validations.length > 0) {
+          pic.validations.forEach(val => {
+            const responsableId = parseInt(val.responsible);
+            if (!isNaN(responsableId)) {
+              const responsableEmail = getEmailFromEmpId(responsableId, allEmpleados, emailDomain);
+              if (responsableEmail) {
+                emailAddresses.add(responsableEmail);
+              }
+            }
+          });
+        }
+
+        // Send email to creator and responsables
+        if (emailAddresses.size > 0) {
+          const recipients = Array.from(emailAddresses);
+          console.log(`Sending PIC creation email to ${recipients.length} recipients:`, recipients);
           
-          // Construct email using username and domain
-          if (emailDomain && empAlias) {
-            const creatorEmail = constructEmailFromUsername(empAlias, emailDomain);
+          sendPicCreatedEmail({
+            to: recipients,
+            creatorName: creatorName,
+            picId: pic.id,
+            platform: pic.platform,
+            revisionReason: pic.revisionReason,
+          }).catch(err => console.error('Error sending PIC creation email:', err));
+        } else {
+          console.log('No valid email addresses found for PIC notification');
+        }
+
+        // Send separate email to approvers
+        if (approverEmails.size > 0) {
+          const approverRecipients = Array.from(approverEmails);
+          console.log(`Sending approval request email to ${approverRecipients.length} approvers:`, approverRecipients);
+          
+          // Send email to each approver individually with their name
+          approverRecipients.forEach(approverEmail => {
+            const approver = allEmpleados.find(emp => {
+              const empEmail = getEmailFromEmpId(emp.emp_id, allEmpleados, emailDomain);
+              return empEmail === approverEmail;
+            });
+            const approverName = approver?.emp_alias || 'Aprobador';
             
-            await sendPicCreatedEmail({
-              to: creatorEmail,
-              creatorName: empAlias,
+            sendPicApprovalRequestEmail({
+              to: approverEmail,
+              approverName: approverName,
               picId: pic.id,
               platform: pic.platform,
               revisionReason: pic.revisionReason,
-            });
-          } else {
-            console.log(`EMAIL_DOMAIN not configured or emp_alias not found for emp_id: ${createdBy}`);
-          }
+              creatorName: creatorName,
+            }).catch(err => console.error('Error sending approval request email:', err));
+          });
         } else {
-          console.log(`Employee not found for emp_id: ${createdBy}`);
+          console.log('No approvers found for approval request email');
         }
       } catch (emailError) {
         // Don't fail PIC creation if email fails
-        console.error('Error sending PIC creation email:', emailError);
+        console.error('Error in email sending process:', emailError);
       }
-    }
+    })();
 
     return NextResponse.json(
       { success: true, data: pic },

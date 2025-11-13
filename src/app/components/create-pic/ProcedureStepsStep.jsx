@@ -105,9 +105,7 @@ export default function ProcedureStepsStep({
                     }
                     
                     return [
-                      <MenuItem key="placeholder" value="" disabled>
-                        Seleccionar responsable
-                      </MenuItem>,
+                    
                       ...empleados.map((empleado) => {
                         const empIdStr = String(empleado.emp_id);
                         // Debug: log if this matches the current value

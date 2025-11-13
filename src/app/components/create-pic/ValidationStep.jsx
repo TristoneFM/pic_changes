@@ -97,9 +97,7 @@ export default function ValidationStep({
                       }
                       
                       return [
-                        <MenuItem key="placeholder" value="" disabled>
-                          Seleccionar responsable
-                        </MenuItem>,
+                     
                         ...empleados.map((empleado) => {
                           const empIdStr = String(empleado.emp_id);
                           if (validation.responsable === empIdStr) {
