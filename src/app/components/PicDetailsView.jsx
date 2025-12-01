@@ -450,13 +450,6 @@ export default function PicDetailsView({ pic, isLoading }) {
               />
             )}
 
-            <TextField
-              fullWidth
-              label="Temporal o definitivo"
-              value={pic.temporaryPermanent === 'Temporal' ? 'Temporal' : pic.temporaryPermanent === 'Definitivo' ? 'Definitivo' : pic.temporaryPermanent || ''}
-              InputProps={{ readOnly: true }}
-              variant="outlined"
-            />
 
             {pic.temporaryPermanent === 'Temporal' && (
               <Box sx={{ display: 'flex', gap: 2 }}>
