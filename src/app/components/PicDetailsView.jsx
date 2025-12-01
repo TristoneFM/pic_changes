@@ -19,11 +19,13 @@ import {
 import { PictureAsPdf as PdfIcon, Visibility as VisibilityIcon, Description as DescriptionIcon } from '@mui/icons-material';
 import { useGetEmpleados, useCheckPdfExists, useGetConfiguration } from '@/hooks/usePics';
 import PdfViewerModal from './PdfViewerModal';
+import { jsPDF } from 'jspdf';
 
 export default function PicDetailsView({ pic, isLoading }) {
   const { data: empleados = [] } = useGetEmpleados();
   const { data: areas = [] } = useGetConfiguration();
   const [openPdfModal, setOpenPdfModal] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { data: pdfExists = false } = useCheckPdfExists(pic?.id);
 
   const formatDate = (dateString) => {
@@ -93,7 +95,7 @@ export default function PicDetailsView({ pic, isLoading }) {
     );
   }
 
-  /* const handleGeneratePDF = async () => {
+  const handleGeneratePDF = async () => {
     if (!pic) return;
     
     setIsGeneratingPdf(true);
@@ -227,7 +229,7 @@ export default function PicDetailsView({ pic, isLoading }) {
             doc.text(stepLines, margin, yPosition);
             yPosition += stepLines.length * lineHeight + 2;
             
-            doc.text(`Responsable: ${getEmployeeName(step.responsable)}`, margin, yPosition);
+            doc.text(`Responsable: ${getEmployeeName(step.responsible)}`, margin, yPosition);
             yPosition += lineHeight;
             doc.text(`Fecha: ${formatDate(step.date) || 'N/A'}`, margin, yPosition);
             yPosition += lineHeight + 3;
@@ -390,7 +392,7 @@ export default function PicDetailsView({ pic, isLoading }) {
     } finally {
       setIsGeneratingPdf(false);
     }
-  }; */
+  };
 
   return (
     <Box
@@ -792,19 +794,39 @@ export default function PicDetailsView({ pic, isLoading }) {
         </CardContent>
       </Card>
 
-      {/* View PDF Button - Bottom - Only show if PDF exists */}
-      {pdfExists && (
-        <Box
-          sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            mt: 4,
-            mb: 2
-          }}
-        >
+      {/* Print PDF and View PDF Buttons - Bottom */}
+      <Box
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          gap: 2,
+          mt: 4,
+          mb: 2
+        }}
+      >
+        {/* Only show PDF generation button if status is Approved */}
+        {(pic.status?.toLowerCase() === 'approved' || pic.status?.toLowerCase() === 'completed') && (
           <Button
             variant="contained"
             color="primary"
+            sx={{
+              px: 4,
+              py: 1.5,
+              fontSize: '1rem',
+              fontWeight: 600,
+            }}
+            startIcon={isGeneratingPdf ? <CircularProgress size={20} color="inherit" /> : <PdfIcon sx={{ fontSize: 28 }} />}
+            onClick={handleGeneratePDF}
+            disabled={!pic?.id || isGeneratingPdf}
+          >
+            {isGeneratingPdf ? 'Generando PDF...' : 'Generar PDF'}
+          </Button>
+        )}
+        
+        {pdfExists && (
+          <Button
+            variant="contained"
+            color="secondary"
             sx={{
               px: 4,
               py: 1.5,
@@ -817,8 +839,8 @@ export default function PicDetailsView({ pic, isLoading }) {
           >
             Archivo Adjunto
           </Button>
-        </Box>
-      )}
+        )}
+      </Box>
 
       {/* PDF Viewer Modal */}
       <PdfViewerModal

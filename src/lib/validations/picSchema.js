@@ -9,9 +9,7 @@ export const picSchema = z.object({
     required_error: 'Por favor selecciona una opción',
   }),
   numerosParteTexto: z.string().optional(),
-  temporalDefinitivo: z.enum(['Temporal', 'Definitivo'], {
-    required_error: 'Por favor selecciona temporal o definitivo',
-  }),
+  temporalDefinitivo: z.literal('Temporal'),
   tipoTemporal: z.string().optional(),
   numeroPzasTiempoFecha: z.string().optional(),
   fechaOriginacion: z.string().min(1, 'La fecha de originación es requerida').refine(

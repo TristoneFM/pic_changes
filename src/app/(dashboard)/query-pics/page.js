@@ -265,7 +265,6 @@ export default function QueryPicsPage() {
               >
                 <MenuItem value="">Todos</MenuItem>
                 <MenuItem value="Temporal">Temporal</MenuItem>
-                <MenuItem value="Definitivo">Definitivo</MenuItem>
               </TextField>
             </Grid>
             <Grid item xs={12} md={1}>

@@ -108,20 +108,7 @@ export default function GeneralInformationStep({ formData, handleChange, errors 
         />
       )}
 
-      {/* Temporary or Permanent */}
-      <TextField
-        fullWidth
-        select
-        label="Temporal o definitivo"
-        value={formData.temporalDefinitivo}
-        onChange={handleChange('temporalDefinitivo')}
-        required
-      >
-        <MenuItem value="Temporal">Temporal</MenuItem>
-        <MenuItem value="Definitivo">Definitivo</MenuItem>
-      </TextField>
-
-      {/* Temporary Type and Number - only if Temporary */}
+      {/* Temporary Type and Number */}
       {formData.temporalDefinitivo === 'Temporal' && (
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
