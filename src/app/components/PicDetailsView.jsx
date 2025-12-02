@@ -490,7 +490,7 @@ export default function PicDetailsView({ pic, isLoading }) {
       const footerY = pageHeight - 10; // Position footer 10mm from bottom
       
       // Bottom right: Document code and revision date
-      doc.setFontSize(8);
+      doc.setFontSize(6);
       doc.setFont('helvetica', 'normal');
       const docCode = 'QD-C3-P04-00-F03';
       const revisionDate = 'Fecha de revisión: 12/01/25';
