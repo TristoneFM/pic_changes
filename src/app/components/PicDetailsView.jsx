@@ -389,14 +389,9 @@ export default function PicDetailsView({ pic, isLoading }) {
           let currentY = columnYPositions[columnIndex];
           
           // Name with better formatting and checkbox
-          doc.setFont('helvetica', 'bold');
-          const approverName = getEmployeeName(approval.approverId);
-          doc.text(approverName, xPosition, currentY);
-          
-          // Draw checked checkbox to the right of the name
           const checkboxSize = 3; // Size of checkbox in mm
-          const nameWidth = doc.getTextWidth(approverName);
-          const checkboxX = xPosition + nameWidth + 2; // Position checkbox 2mm after name
+          const checkboxSpacing = 2; // Space between checkbox and name
+          const checkboxX = xPosition;
           const checkboxY = currentY - 2; // Adjust Y position to center checkbox with text
           
           // Draw checkbox border
@@ -409,21 +404,28 @@ export default function PicDetailsView({ pic, isLoading }) {
           doc.line(checkboxX + 0.5, checkboxY + checkboxSize / 2, checkboxX + checkboxSize / 2 - 0.3, checkboxY + checkboxSize - 0.5);
           doc.line(checkboxX + checkboxSize / 2 - 0.3, checkboxY + checkboxSize - 0.5, checkboxX + checkboxSize - 0.5, checkboxY + 0.5);
           
+          // Draw name to the right of checkbox
+          doc.setFont('helvetica', 'bold');
+          const approverName = getEmployeeName(approval.approverId);
+          const nameX = checkboxX + checkboxSize + checkboxSpacing;
+          doc.text(approverName, nameX, currentY);
+          
           currentY += lineHeight + 1;
           
-          // Comment with better formatting
+          // Comment with better formatting - aligned with name
           if (approval.comment) {
             doc.setFont('helvetica', 'normal');
-            const commentLines = doc.splitTextToSize(approval.comment, approvalColumnWidth - 2);
-            doc.text(commentLines, xPosition, currentY);
+            const commentWidth = approvalColumnWidth - (checkboxSize + checkboxSpacing) - 2;
+            const commentLines = doc.splitTextToSize(approval.comment, commentWidth);
+            doc.text(commentLines, nameX, currentY);
             currentY += commentLines.length * lineHeight + 1;
           }
           
-          // Date with better formatting
+          // Date with better formatting - aligned with name
           if (approval.approvalStatus?.toLowerCase() !== 'pending' && approval.responseDate) {
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(7);
-            doc.text(`Fecha: ${new Date(approval.responseDate).toLocaleDateString('es-MX')}`, xPosition, currentY);
+            doc.text(`Fecha: ${new Date(approval.responseDate).toLocaleDateString('es-MX')}`, nameX, currentY);
             doc.setFontSize(8);
             currentY += lineHeight;
           }
