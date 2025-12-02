@@ -104,7 +104,7 @@ export default function PicDetailsView({ pic, isLoading }) {
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
       let yPosition = 2; // Moved everything more up
-      const margin = 2; // Minimal margin
+      const margin = 8;
       const lineHeight = 3.5;
       const sectionSpacing = 0; // No spacing between sections
       const compactSpacing = 1.5;
@@ -148,9 +148,9 @@ export default function PicDetailsView({ pic, isLoading }) {
       }
 
       // Title - smaller font, centered with logo
-      doc.setFontSize(10);
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      const titleText = `Información del PIC #${pic.id || 'N/A'}`;
+      const titleText = `Información del PIC No. ${pic.id || 'N/A'}`;
       
       // Calculate combined width of logo + spacing + title
       const titleWidth = doc.getTextWidth(titleText);
@@ -388,10 +388,27 @@ export default function PicDetailsView({ pic, isLoading }) {
           const xPosition = margin + boxPadding + columnIndex * (approvalColumnWidth + columnSpacing);
           let currentY = columnYPositions[columnIndex];
           
-          // Name with better formatting
+          // Name with better formatting and checkbox
           doc.setFont('helvetica', 'bold');
           const approverName = getEmployeeName(approval.approverId);
           doc.text(approverName, xPosition, currentY);
+          
+          // Draw checked checkbox to the right of the name
+          const checkboxSize = 3; // Size of checkbox in mm
+          const nameWidth = doc.getTextWidth(approverName);
+          const checkboxX = xPosition + nameWidth + 2; // Position checkbox 2mm after name
+          const checkboxY = currentY - 2; // Adjust Y position to center checkbox with text
+          
+          // Draw checkbox border
+          doc.setDrawColor(0, 0, 0);
+          doc.setLineWidth(0.3);
+          doc.rect(checkboxX, checkboxY, checkboxSize, checkboxSize);
+          
+          // Draw checkmark inside checkbox
+          doc.setLineWidth(0.5);
+          doc.line(checkboxX + 0.5, checkboxY + checkboxSize / 2, checkboxX + checkboxSize / 2 - 0.3, checkboxY + checkboxSize - 0.5);
+          doc.line(checkboxX + checkboxSize / 2 - 0.3, checkboxY + checkboxSize - 0.5, checkboxX + checkboxSize - 0.5, checkboxY + 0.5);
+          
           currentY += lineHeight + 1;
           
           // Comment with better formatting
