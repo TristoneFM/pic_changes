@@ -485,6 +485,27 @@ export default function PicDetailsView({ pic, isLoading }) {
       doc.setLineWidth(0.5);
       doc.rect(margin, bottomRowStartY - boxPadding, pageWidth - margin * 2, bottomRowEndY - bottomRowStartY);
 
+      // Footer elements
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const footerY = pageHeight - 10; // Position footer 10mm from bottom
+      
+      // Bottom right: Document code and revision date
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      const docCode = 'QD-C3-P04-00-F03';
+      const revisionDate = 'Fecha de revisión: 12/01/25';
+      const docCodeWidth = doc.getTextWidth(docCode);
+      const revisionDateWidth = doc.getTextWidth(revisionDate);
+      const rightMargin = pageWidth - margin;
+      
+      doc.text(docCode, rightMargin - docCodeWidth, footerY);
+      doc.text(revisionDate, rightMargin - revisionDateWidth, footerY + lineHeight);
+      
+      // Bottom center: Page number
+      const pageNumber = 'Pagina 1 de 1';
+      const pageNumberWidth = doc.getTextWidth(pageNumber);
+      doc.text(pageNumber, (pageWidth - pageNumberWidth) / 2, footerY + lineHeight);
+
       // Save PDF
       const fileName = `PIC_${pic.id || 'details'}_${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
