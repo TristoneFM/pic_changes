@@ -101,7 +101,7 @@ export default function PicDetailsView({ pic, isLoading }) {
     setIsGeneratingPdf(true);
     
     try {
-      const doc = new jsPDF('p', 'mm', 'a4');
+      const doc = new jsPDF('p', 'mm', 'letter');
       const pageWidth = doc.internal.pageSize.getWidth();
       let yPosition = 2; // Moved everything more up
       const margin = 8;
