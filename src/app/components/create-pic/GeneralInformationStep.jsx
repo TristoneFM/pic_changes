@@ -163,7 +163,7 @@ export default function GeneralInformationStep({ formData, handleChange, errors 
         <TextField
           fullWidth
           type="date"
-          label="Fecha de implementación"
+          label="Fecha de Vencimiento"
           value={formData.fechaImplementacion}
           onChange={handleChange('fechaImplementacion')}
           InputLabelProps={{ shrink: true }}

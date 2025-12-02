@@ -103,16 +103,20 @@ export default function PicDetailsView({ pic, isLoading }) {
     try {
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
-      let yPosition = 8;
+      let yPosition = 2; // Moved everything more up
       const margin = 8;
       const lineHeight = 3.5;
-      const sectionSpacing = 2;
+      const sectionSpacing = 0; // No spacing between sections
       const compactSpacing = 1.5;
       const columnSpacing = 4;
+      const boxPadding = 2; // Padding inside boxes
       const fourColumnWidth = (pageWidth - margin * 2 - columnSpacing * 3) / 4;
       const twoColumnWidth = (pageWidth - margin * 2 - columnSpacing) / 2;
 
-      // Add Tristone logo (small)
+      // Add Tristone logo and title on same line, centered together
+      let logoWidth = 0;
+      let logoHeight = 0;
+      let logoDataUrl = null;
       try {
         const logoResponse = await fetch('/images/tristone.jpg');
         if (logoResponse.ok) {
@@ -122,13 +126,11 @@ export default function PicDetailsView({ pic, isLoading }) {
           await new Promise((resolve) => {
             reader.onload = () => {
               try {
-                const logoDataUrl = reader.result;
+                logoDataUrl = reader.result;
                 const logoImg = new Image();
                 logoImg.onload = () => {
-                  const logoWidth = 20; // Small logo
-                  const logoHeight = (logoImg.height / logoImg.width) * logoWidth;
-                  doc.addImage(logoDataUrl, 'JPEG', margin, margin, logoWidth, logoHeight);
-                  yPosition = margin + logoHeight + 3;
+                  logoWidth = 12; // Smaller logo
+                  logoHeight = (logoImg.height / logoImg.width) * logoWidth;
                   resolve();
                 };
                 logoImg.onerror = () => resolve();
@@ -145,17 +147,37 @@ export default function PicDetailsView({ pic, isLoading }) {
         // Continue without logo
       }
 
-      // Title
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      const titleText = `Información del PIC #${pic.id || 'N/A'}`;
-      doc.text(titleText, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += lineHeight + compactSpacing;
-
-      // General Information Section - Four Columns
+      // Title - smaller font, centered with logo
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('Información General', margin, yPosition);
+      const titleText = `Información del PIC #${pic.id || 'N/A'}`;
+      
+      // Calculate combined width of logo + spacing + title
+      const titleWidth = doc.getTextWidth(titleText);
+      const logoSpacing = 3;
+      const combinedWidth = logoWidth + logoSpacing + titleWidth;
+      
+      // Center the combined logo + title
+      const startX = (pageWidth - combinedWidth) / 2;
+      const titleY = yPosition + (logoHeight > 0 ? logoHeight / 2 + 1 : 0);
+      
+      // Draw logo if available
+      if (logoWidth > 0 && logoDataUrl) {
+        doc.addImage(logoDataUrl, 'JPEG', startX, yPosition, logoWidth, logoHeight);
+      }
+      
+      // Draw title next to logo
+      doc.text(titleText, startX + logoWidth + logoSpacing, titleY, { align: 'left' });
+      
+      // Set yPosition to the bottom of logo/title line
+      yPosition = Math.max(yPosition + logoHeight, titleY) + compactSpacing;
+
+      // General Information Section - Four Columns (in box)
+      const generalInfoStartY = yPosition;
+      yPosition += boxPadding; // Add margin from top border
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Información General', margin + boxPadding, yPosition);
       yPosition += lineHeight + compactSpacing;
 
       doc.setFontSize(7);
@@ -171,7 +193,7 @@ export default function PicDetailsView({ pic, isLoading }) {
           [`Número:`, pic.piecesTimeDateNumber || 'N/A']
         ] : []),
         ['F. Originación:', formatDate(pic.originationDate) || 'N/A'],
-        ['F. Implement.:', formatDate(pic.implementationDate) || 'N/A'],
+        ['F. Vencimiento:', formatDate(pic.implementationDate) || 'N/A'],
         ['Estado:', getStatusLabel(pic.status) || 'N/A'],
       ];
 
@@ -181,7 +203,7 @@ export default function PicDetailsView({ pic, isLoading }) {
 
       generalInfo.forEach(([label, value], index) => {
         const columnIndex = Math.floor(index / itemsPerColumn);
-        const xPosition = margin + columnIndex * (fourColumnWidth + columnSpacing);
+        const xPosition = margin + boxPadding + columnIndex * (fourColumnWidth + columnSpacing);
         let currentY = columnYPositions[columnIndex];
 
         doc.setFont('helvetica', 'bold');
@@ -192,28 +214,46 @@ export default function PicDetailsView({ pic, isLoading }) {
         columnYPositions[columnIndex] = currentY + Math.max(lineHeight, lines.length * lineHeight) + compactSpacing;
       });
 
-      yPosition = Math.max(...columnYPositions) + sectionSpacing;
+      yPosition = Math.max(...columnYPositions) + boxPadding;
+      const generalInfoEndY = yPosition;
+      
+      // Draw box around general information
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, generalInfoStartY - boxPadding, pageWidth - margin * 2, generalInfoEndY - generalInfoStartY);
+      yPosition += sectionSpacing;
 
-      // Full width fields
+      // Full width fields (in box)
+      const opsMotivoStartY = yPosition;
+      yPosition += boxPadding; // Add margin from top border
       doc.setFont('helvetica', 'bold');
-      doc.text('Ops. Afectadas:', margin, yPosition);
+      doc.text('Ops. Afectadas:', margin + boxPadding, yPosition);
       doc.setFont('helvetica', 'normal');
-      const opsLines = doc.splitTextToSize(pic.affectedOperations || 'N/A', pageWidth - margin * 2 - 30);
-      doc.text(opsLines, margin + 30, yPosition);
+      const opsLines = doc.splitTextToSize(pic.affectedOperations || 'N/A', pageWidth - margin * 2 - 30 - boxPadding * 2);
+      doc.text(opsLines, margin + 30 + boxPadding, yPosition);
       yPosition += Math.max(lineHeight, opsLines.length * lineHeight) + compactSpacing;
 
       doc.setFont('helvetica', 'bold');
-      doc.text('Motivo:', margin, yPosition);
+      doc.text('Motivo:', margin + boxPadding, yPosition);
       doc.setFont('helvetica', 'normal');
-      const motivoLines = doc.splitTextToSize(pic.revisionReason || 'N/A', pageWidth - margin * 2 - 30);
-      doc.text(motivoLines, margin + 30, yPosition);
-      yPosition += Math.max(lineHeight, motivoLines.length * lineHeight) + sectionSpacing;
+      const motivoLines = doc.splitTextToSize(pic.revisionReason || 'N/A', pageWidth - margin * 2 - 30 - boxPadding * 2);
+      doc.text(motivoLines, margin + 30 + boxPadding, yPosition);
+      yPosition += Math.max(lineHeight, motivoLines.length * lineHeight) + boxPadding;
+      const opsMotivoEndY = yPosition;
+      
+      // Draw box around ops and motivo
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, opsMotivoStartY - boxPadding, pageWidth - margin * 2, opsMotivoEndY - opsMotivoStartY);
+      yPosition += sectionSpacing;
 
-      // Procedure Steps - Two Columns
+      // Procedure Steps - Two Columns (in box)
       if (pic.procedureSteps && pic.procedureSteps.length > 0) {
+        const stepsStartY = yPosition;
+        yPosition += boxPadding; // Add margin from top border
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text('Pasos del Procedimiento', margin, yPosition);
+        doc.text('Pasos del Procedimiento', margin + boxPadding, yPosition);
         yPosition += lineHeight + compactSpacing;
 
         doc.setFontSize(7);
@@ -224,14 +264,14 @@ export default function PicDetailsView({ pic, isLoading }) {
         let stepLeftY = yPosition;
         sortedSteps.slice(0, midPoint).forEach((step, index) => {
           doc.setFont('helvetica', 'bold');
-          doc.text(`P${step.stepOrder || index + 1}:`, margin, stepLeftY);
+          doc.text(`P${step.stepOrder || index + 1}:`, margin + boxPadding, stepLeftY);
           doc.setFont('helvetica', 'normal');
           const stepLines = doc.splitTextToSize(step.stepDescription || '', twoColumnWidth - 10);
-          doc.text(stepLines, margin + 6, stepLeftY);
+          doc.text(stepLines, margin + 6 + boxPadding, stepLeftY);
           stepLeftY += stepLines.length * lineHeight + compactSpacing;
-          doc.text(`Resp: ${getEmployeeName(step.responsible)}`, margin + 6, stepLeftY);
+          doc.text(`Resp: ${getEmployeeName(step.responsible)}`, margin + 6 + boxPadding, stepLeftY);
           stepLeftY += lineHeight;
-          doc.text(`Fecha: ${formatDate(step.date) || 'N/A'}`, margin + 6, stepLeftY);
+          doc.text(`Fecha: ${formatDate(step.date) || 'N/A'}`, margin + 6 + boxPadding, stepLeftY);
           stepLeftY += lineHeight + compactSpacing;
         });
 
@@ -239,21 +279,28 @@ export default function PicDetailsView({ pic, isLoading }) {
         let stepRightY = yPosition;
         sortedSteps.slice(midPoint).forEach((step, index) => {
           doc.setFont('helvetica', 'bold');
-          doc.text(`P${step.stepOrder || midPoint + index + 1}:`, margin + twoColumnWidth + columnSpacing, stepRightY);
+          doc.text(`P${step.stepOrder || midPoint + index + 1}:`, margin + twoColumnWidth + columnSpacing + boxPadding, stepRightY);
           doc.setFont('helvetica', 'normal');
           const stepLines = doc.splitTextToSize(step.stepDescription || '', twoColumnWidth - 10);
-          doc.text(stepLines, margin + twoColumnWidth + columnSpacing + 6, stepRightY);
+          doc.text(stepLines, margin + twoColumnWidth + columnSpacing + 6 + boxPadding, stepRightY);
           stepRightY += stepLines.length * lineHeight + compactSpacing;
-          doc.text(`Resp: ${getEmployeeName(step.responsible)}`, margin + twoColumnWidth + columnSpacing + 6, stepRightY);
+          doc.text(`Resp: ${getEmployeeName(step.responsible)}`, margin + twoColumnWidth + columnSpacing + 6 + boxPadding, stepRightY);
           stepRightY += lineHeight;
-          doc.text(`Fecha: ${formatDate(step.date) || 'N/A'}`, margin + twoColumnWidth + columnSpacing + 6, stepRightY);
+          doc.text(`Fecha: ${formatDate(step.date) || 'N/A'}`, margin + twoColumnWidth + columnSpacing + 6 + boxPadding, stepRightY);
           stepRightY += lineHeight + compactSpacing;
         });
 
-        yPosition = Math.max(stepLeftY, stepRightY) + sectionSpacing;
+        yPosition = Math.max(stepLeftY, stepRightY) + boxPadding;
+        const stepsEndY = yPosition;
+        
+        // Draw box around procedure steps
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.5);
+        doc.rect(margin, stepsStartY - boxPadding, pageWidth - margin * 2, stepsEndY - stepsStartY);
+        yPosition += sectionSpacing;
       }
 
-      // Validations and Documents - Two Columns (Validations on left)
+      // Validations and Documents - Two Columns (Validations on left) (in box)
       const hasDocuments = pic.documents && pic.documents.length > 0;
       const hasValidations = pic.validations && pic.validations.length > 0;
       
@@ -263,22 +310,23 @@ export default function PicDetailsView({ pic, isLoading }) {
         // Left column - Validations
         let valY = sectionStartY;
         if (hasValidations) {
+          valY = sectionStartY + boxPadding; // Add margin from top border
           doc.setFontSize(9);
           doc.setFont('helvetica', 'bold');
-          doc.text('Validación', margin, sectionStartY);
-          valY = sectionStartY + lineHeight + compactSpacing;
+          doc.text('Validación', margin + boxPadding, valY);
+          valY += lineHeight + compactSpacing;
           
           doc.setFontSize(7);
           pic.validations.forEach((val, index) => {
             doc.setFont('helvetica', 'bold');
-            doc.text(`V${index + 1}:`, margin, valY);
+            doc.text(`V${index + 1}:`, margin + boxPadding, valY);
             doc.setFont('helvetica', 'normal');
             const valLines = doc.splitTextToSize(val.validationDescription || '', twoColumnWidth - 10);
-            doc.text(valLines, margin + 6, valY);
+            doc.text(valLines, margin + 6 + boxPadding, valY);
             valY += valLines.length * lineHeight + compactSpacing;
-            doc.text(`Resp: ${getEmployeeName(val.responsible)}`, margin + 6, valY);
+            doc.text(`Resp: ${getEmployeeName(val.responsible)}`, margin + 6 + boxPadding, valY);
             valY += lineHeight;
-            doc.text(`Fecha: ${formatDate(val.date) || 'N/A'}`, margin + 6, valY);
+            doc.text(`Fecha: ${formatDate(val.date) || 'N/A'}`, margin + 6 + boxPadding, valY);
             valY += lineHeight + compactSpacing;
           });
         } else {
@@ -288,20 +336,21 @@ export default function PicDetailsView({ pic, isLoading }) {
         // Right column - Documents
         let docY = sectionStartY;
         if (hasDocuments) {
+          docY = sectionStartY + boxPadding; // Add margin from top border
           doc.setFontSize(9);
           doc.setFont('helvetica', 'bold');
-          doc.text('Documentos', margin + twoColumnWidth + columnSpacing, sectionStartY);
-          docY = sectionStartY + lineHeight + compactSpacing;
+          doc.text('Documentos', margin + twoColumnWidth + columnSpacing + boxPadding, docY);
+          docY += lineHeight + compactSpacing;
           
           doc.setFontSize(7);
           pic.documents.forEach((document) => {
             doc.setFont('helvetica', 'bold');
-            doc.text(`• ${document.documentType || 'N/A'}`, margin + twoColumnWidth + columnSpacing, docY);
+            doc.text(`• ${document.documentType || 'N/A'}`, margin + twoColumnWidth + columnSpacing + boxPadding, docY);
             doc.setFont('helvetica', 'normal');
             docY += lineHeight;
-            doc.text(`Resp: ${getEmployeeName(document.responsible)}`, margin + twoColumnWidth + columnSpacing + 3, docY);
+            doc.text(`Resp: ${getEmployeeName(document.responsible)}`, margin + twoColumnWidth + columnSpacing + 3 + boxPadding, docY);
             docY += lineHeight;
-            doc.text(`Fecha: ${formatDate(document.date) || 'N/A'}`, margin + twoColumnWidth + columnSpacing + 3, docY);
+            doc.text(`Fecha: ${formatDate(document.date) || 'N/A'}`, margin + twoColumnWidth + columnSpacing + 3 + boxPadding, docY);
             docY += lineHeight + compactSpacing;
           });
         } else {
@@ -309,25 +358,34 @@ export default function PicDetailsView({ pic, isLoading }) {
         }
 
         // Calculate max Y position to ensure no overlap with next section
-        yPosition = Math.max(valY, docY) + sectionSpacing;
+        yPosition = Math.max(valY, docY) + boxPadding;
+        const sectionEndY = yPosition;
+        
+        // Draw box around validations/documents
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.5);
+        doc.rect(margin, sectionStartY - boxPadding, pageWidth - margin * 2, sectionEndY - sectionStartY);
+        yPosition += sectionSpacing;
       }
 
-      // Approvals - Multiple Columns Side by Side
+      // Approvals - Multiple Columns Side by Side (in box)
       if (pic.approvals && pic.approvals.length > 0) {
+        const approvalsStartY = yPosition;
+        yPosition += boxPadding; // Add margin from top border
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text('Aprobaciones', margin, yPosition);
+        doc.text('Aprobaciones', margin + boxPadding, yPosition);
         yPosition += lineHeight + compactSpacing;
 
         doc.setFontSize(7);
         const approvalStartY = yPosition;
         const numColumns = 4; // Display in 4 columns
-        const approvalColumnWidth = (pageWidth - margin * 2 - columnSpacing * (numColumns - 1)) / numColumns;
+        const approvalColumnWidth = (pageWidth - margin * 2 - columnSpacing * (numColumns - 1) - boxPadding * 2) / numColumns;
         const columnYPositions = Array(numColumns).fill(approvalStartY);
         
         pic.approvals.forEach((approval, index) => {
           const columnIndex = index % numColumns;
-          const xPosition = margin + columnIndex * (approvalColumnWidth + columnSpacing);
+          const xPosition = margin + boxPadding + columnIndex * (approvalColumnWidth + columnSpacing);
           let currentY = columnYPositions[columnIndex];
           
           doc.setFont('helvetica', 'bold');
@@ -351,14 +409,22 @@ export default function PicDetailsView({ pic, isLoading }) {
         });
 
         // Move to next row after all approvals are complete
-        yPosition = Math.max(...columnYPositions) + sectionSpacing;
+        yPosition = Math.max(...columnYPositions) + boxPadding;
+        const approvalsEndY = yPosition;
+        
+        // Draw box around approvals
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.5);
+        doc.rect(margin, approvalsStartY - boxPadding, pageWidth - margin * 2, approvalsEndY - approvalsStartY);
+        yPosition += sectionSpacing;
       }
 
-      // Availability and Change Reason - Two Columns (separate row below approvals)
-      const bottomRowY = yPosition;
+      // Availability and Change Reason - Two Columns (separate row below approvals) (in box)
+      const bottomRowStartY = yPosition;
+      yPosition += boxPadding; // Add margin from top border
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('Disponibilidad:', margin, bottomRowY);
+      doc.text('Disponibilidad:', margin + boxPadding, yPosition);
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       const availabilityItems = [];
@@ -366,12 +432,12 @@ export default function PicDetailsView({ pic, isLoading }) {
       if (pic.availability?.testEquipment) availabilityItems.push('Equipo Prueba');
       if (pic.availability?.other) availabilityItems.push(`Otro: ${pic.availability.other}`);
       const availLines = doc.splitTextToSize(availabilityItems.length > 0 ? availabilityItems.join(', ') : 'Ninguna', twoColumnWidth - 30);
-      doc.text(availLines, margin + 25, bottomRowY);
+      doc.text(availLines, margin + 25 + boxPadding, yPosition);
       const availHeight = availLines.length * lineHeight;
 
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('Motivo Cambio:', margin + twoColumnWidth + columnSpacing, bottomRowY);
+      doc.text('Motivo Cambio:', margin + twoColumnWidth + columnSpacing + boxPadding, yPosition);
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       const changeReasons = [];
@@ -383,10 +449,16 @@ export default function PicDetailsView({ pic, isLoading }) {
       if (pic.changeReason?.process) changeReasons.push('Proceso');
       if (pic.changeReason?.other) changeReasons.push(`Otro: ${pic.changeReason.other}`);
       const reasonLines = doc.splitTextToSize(changeReasons.length > 0 ? changeReasons.join(', ') : 'Ninguno', twoColumnWidth - 30);
-      doc.text(reasonLines, margin + twoColumnWidth + columnSpacing + 25, bottomRowY);
+      doc.text(reasonLines, margin + twoColumnWidth + columnSpacing + 25 + boxPadding, bottomRowStartY);
       const reasonHeight = reasonLines.length * lineHeight;
 
-      yPosition = bottomRowY + Math.max(availHeight, reasonHeight) + compactSpacing;
+      yPosition = bottomRowStartY + Math.max(availHeight, reasonHeight) + boxPadding;
+      const bottomRowEndY = yPosition;
+      
+      // Draw box around availability and change reason
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, bottomRowStartY - boxPadding, pageWidth - margin * 2, bottomRowEndY - bottomRowStartY);
 
       // Save PDF
       const fileName = `PIC_${pic.id || 'details'}_${new Date().toISOString().split('T')[0]}.pdf`;
@@ -490,7 +562,7 @@ export default function PicDetailsView({ pic, isLoading }) {
               <TextField
                 fullWidth
                 type="date"
-                label="Fecha de Implementación"
+                label="Fecha de Vencimiento"
                 value={formatDate(pic.implementationDate)}
                 InputProps={{ readOnly: true }}
                 InputLabelProps={{ shrink: true }}

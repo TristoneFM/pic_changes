@@ -350,7 +350,7 @@ export default function ApproveRejectPage() {
                 <TextField
                   fullWidth
                   type="date"
-                  label="Fecha de Implementación"
+                  label="Fecha de Vencimiento"
                   value={selectedPic.implementationDate ? new Date(selectedPic.implementationDate).toISOString().split('T')[0] : ''}
                   InputProps={{ readOnly: true }}
                   InputLabelProps={{ shrink: true }}

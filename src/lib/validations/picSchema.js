@@ -20,7 +20,7 @@ export const picSchema = z.object({
     },
     { message: 'Formato de fecha inválido' }
   ),
-  fechaImplementacion: z.string().min(1, 'La fecha de implementación es requerida').refine(
+  fechaImplementacion: z.string().min(1, 'La fecha de vencimiento es requerida').refine(
     (date) => {
       if (!date) return false;
       const parsedDate = new Date(date);
@@ -135,6 +135,34 @@ export const picSchemaRefined = picSchema.refine(
   {
     message: 'El tipo y número son requeridos para PICs temporales',
     path: ['tipoTemporal'],
+  }
+).refine(
+  (data) => {
+    // At least one availability option must be selected
+    const hasAvailability = data.disponibilidad.fixtures || 
+                           data.disponibilidad.equipoPrueba || 
+                           (data.disponibilidad.otros && data.disponibilidad.otros.trim().length > 0);
+    return hasAvailability;
+  },
+  {
+    message: 'Debe seleccionar al menos una opción de disponibilidad o especificar otra',
+    path: ['disponibilidad'],
+  }
+).refine(
+  (data) => {
+    // At least one change reason option must be selected
+    const hasChangeReason = data.motivoCambio.seguridad ||
+                           data.motivoCambio.entrega ||
+                           data.motivoCambio.productividad ||
+                           data.motivoCambio.calidad ||
+                           data.motivoCambio.costo ||
+                           data.motivoCambio.proceso ||
+                           (data.motivoCambio.otros && data.motivoCambio.otros.trim().length > 0);
+    return hasChangeReason;
+  },
+  {
+    message: 'Debe seleccionar al menos un motivo de cambio o especificar otro',
+    path: ['motivoCambio'],
   }
 );
 

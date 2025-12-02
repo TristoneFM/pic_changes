@@ -21,32 +21,13 @@ export default function AvailabilityChangeReasonStep({
           Disponibilidad de:
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Box sx={{ display: 'flex', gap: 4 }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={availability.fixtures}
-                  onChange={handleAvailabilityChange('fixtures')}
-                />
-              }
-              label="Herrajes"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={availability.equipoPrueba}
-                  onChange={handleAvailabilityChange('equipoPrueba')}
-                />
-              }
-              label="Equipo de Prueba"
-            />
-          </Box>
+
           <TextField
             fullWidth
-            label="Otro:"
+            label="Especifique:"
             value={availability.otros}
             onChange={handleAvailabilityChange('otros')}
-            placeholder="Especifique otro..."
+            placeholder="Especifique"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
