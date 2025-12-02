@@ -104,7 +104,7 @@ export default function PicDetailsView({ pic, isLoading }) {
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
       let yPosition = 2; // Moved everything more up
-      const margin = 8;
+      const margin = 2; // Minimal margin
       const lineHeight = 3.5;
       const sectionSpacing = 0; // No spacing between sections
       const compactSpacing = 1.5;
