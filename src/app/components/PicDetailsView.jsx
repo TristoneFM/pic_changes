@@ -103,25 +103,17 @@ export default function PicDetailsView({ pic, isLoading }) {
     try {
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      let yPosition = 20;
-      const margin = 15;
-      const lineHeight = 7;
-      const sectionSpacing = 10;
+      let yPosition = 8;
+      const margin = 8;
+      const lineHeight = 3.5;
+      const sectionSpacing = 2;
+      const compactSpacing = 1.5;
+      const columnSpacing = 4;
+      const fourColumnWidth = (pageWidth - margin * 2 - columnSpacing * 3) / 4;
+      const twoColumnWidth = (pageWidth - margin * 2 - columnSpacing) / 2;
 
-      // Helper function to add new page if needed
-      const checkNewPage = (requiredSpace) => {
-        if (yPosition + requiredSpace > pageHeight - margin) {
-          doc.addPage();
-          yPosition = margin;
-          return true;
-        }
-        return false;
-      };
-
-      // Add Tristone logo
+      // Add Tristone logo (small)
       try {
-        // Load logo as base64 to avoid CORS issues
         const logoResponse = await fetch('/images/tristone.jpg');
         if (logoResponse.ok) {
           const blob = await logoResponse.blob();
@@ -133,236 +125,254 @@ export default function PicDetailsView({ pic, isLoading }) {
                 const logoDataUrl = reader.result;
                 const logoImg = new Image();
                 logoImg.onload = () => {
-                  const logoWidth = 40;
+                  const logoWidth = 20; // Small logo
                   const logoHeight = (logoImg.height / logoImg.width) * logoWidth;
                   doc.addImage(logoDataUrl, 'JPEG', margin, margin, logoWidth, logoHeight);
-                  yPosition = margin + logoHeight + 10;
+                  yPosition = margin + logoHeight + 3;
                   resolve();
                 };
-                logoImg.onerror = () => {
-                  console.error('Error processing logo image');
-                  resolve(); // Continue without logo
-                };
+                logoImg.onerror = () => resolve();
                 logoImg.src = logoDataUrl;
-              } catch (error) {
-                console.error('Error adding logo:', error);
-                resolve(); // Continue without logo
+              } catch {
+                resolve();
               }
             };
-            reader.onerror = () => {
-              console.error('Error reading logo file');
-              resolve(); // Continue without logo
-            };
+            reader.onerror = () => resolve();
             reader.readAsDataURL(blob);
           });
-        } else {
-          console.warn('Logo file not found, continuing without logo');
         }
-      } catch (error) {
-        console.error('Logo error:', error);
+      } catch {
         // Continue without logo
       }
 
       // Title
-      doc.setFontSize(16);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       const titleText = `Información del PIC #${pic.id || 'N/A'}`;
       doc.text(titleText, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += lineHeight + 5;
+      yPosition += lineHeight + compactSpacing;
 
-      // General Information Section
-      doc.setFontSize(14);
+      // General Information Section - Four Columns
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.text('Información General', margin, yPosition);
-      yPosition += lineHeight + 3;
+      yPosition += lineHeight + compactSpacing;
 
-      doc.setFontSize(10);
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       
       const generalInfo = [
         ['Plataforma:', pic.platform || 'N/A'],
-        ['Números de parte afectados:', pic.affectedPartNumbers === 'todos' ? 'Contempla todos los NPs' : pic.affectedPartNumbers === 'ciertos' ? 'Solo ciertos NPs' : pic.affectedPartNumbers || 'N/A'],
-        ...(pic.affectedPartNumbers === 'ciertos' && pic.partNumbersText ? [['Números de parte:', pic.partNumbersText]] : []),
-        ['Temporal o definitivo:', pic.temporaryPermanent || 'N/A'],
+        ['NPs afectados:', pic.affectedPartNumbers === 'todos' ? 'Todos' : pic.affectedPartNumbers === 'ciertos' ? 'Ciertos' : pic.affectedPartNumbers || 'N/A'],
+        ...(pic.affectedPartNumbers === 'ciertos' && pic.partNumbersText ? [['NPs:', pic.partNumbersText]] : []),
+        ['Tipo:', pic.temporaryPermanent || 'N/A'],
         ...(pic.temporaryPermanent === 'Temporal' ? [
-          ['Tipo p/Temporal:', pic.temporaryType || 'N/A'],
-          [`Número de ${pic.temporaryType?.toLowerCase() || 'temporal'}:`, pic.piecesTimeDateNumber || 'N/A']
+          ['Tipo Temp:', pic.temporaryType || 'N/A'],
+          [`Número:`, pic.piecesTimeDateNumber || 'N/A']
         ] : []),
-        ['Fecha de Originación:', formatDate(pic.originationDate) || 'N/A'],
-        ['Fecha de Implementación:', formatDate(pic.implementationDate) || 'N/A'],
-        ['Operaciones Afectadas:', pic.affectedOperations || 'N/A'],
-        ['Motivo de Revisión:', pic.revisionReason || 'N/A'],
+        ['F. Originación:', formatDate(pic.originationDate) || 'N/A'],
+        ['F. Implement.:', formatDate(pic.implementationDate) || 'N/A'],
         ['Estado:', getStatusLabel(pic.status) || 'N/A'],
       ];
 
-      generalInfo.forEach(([label, value]) => {
-        checkNewPage(lineHeight + 2);
+      // Distribute general info across 4 columns
+      const itemsPerColumn = Math.ceil(generalInfo.length / 4);
+      const columnYPositions = [yPosition, yPosition, yPosition, yPosition];
+
+      generalInfo.forEach(([label, value], index) => {
+        const columnIndex = Math.floor(index / itemsPerColumn);
+        const xPosition = margin + columnIndex * (fourColumnWidth + columnSpacing);
+        let currentY = columnYPositions[columnIndex];
+
         doc.setFont('helvetica', 'bold');
-        doc.text(label, margin, yPosition);
+        doc.text(label, xPosition, currentY);
         doc.setFont('helvetica', 'normal');
-        const lines = doc.splitTextToSize(value || '', pageWidth - margin * 2 - 50);
-        doc.text(lines, margin + 50, yPosition);
-        yPosition += Math.max(lineHeight, lines.length * lineHeight) + 2;
+        const lines = doc.splitTextToSize(value || '', fourColumnWidth - 20);
+        doc.text(lines, xPosition + 20, currentY);
+        columnYPositions[columnIndex] = currentY + Math.max(lineHeight, lines.length * lineHeight) + compactSpacing;
       });
 
-      yPosition += sectionSpacing;
+      yPosition = Math.max(...columnYPositions) + sectionSpacing;
 
-      // Procedure Steps
+      // Full width fields
+      doc.setFont('helvetica', 'bold');
+      doc.text('Ops. Afectadas:', margin, yPosition);
+      doc.setFont('helvetica', 'normal');
+      const opsLines = doc.splitTextToSize(pic.affectedOperations || 'N/A', pageWidth - margin * 2 - 30);
+      doc.text(opsLines, margin + 30, yPosition);
+      yPosition += Math.max(lineHeight, opsLines.length * lineHeight) + compactSpacing;
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Motivo:', margin, yPosition);
+      doc.setFont('helvetica', 'normal');
+      const motivoLines = doc.splitTextToSize(pic.revisionReason || 'N/A', pageWidth - margin * 2 - 30);
+      doc.text(motivoLines, margin + 30, yPosition);
+      yPosition += Math.max(lineHeight, motivoLines.length * lineHeight) + sectionSpacing;
+
+      // Procedure Steps - Two Columns
       if (pic.procedureSteps && pic.procedureSteps.length > 0) {
-        checkNewPage(lineHeight * 3);
-        doc.setFontSize(14);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         doc.text('Pasos del Procedimiento', margin, yPosition);
-        yPosition += lineHeight + 3;
+        yPosition += lineHeight + compactSpacing;
 
-        doc.setFontSize(10);
-        pic.procedureSteps
-          .sort((a, b) => (a.stepOrder || 0) - (b.stepOrder || 0))
-          .forEach((step, index) => {
-            checkNewPage(lineHeight * 4);
+        doc.setFontSize(7);
+        const sortedSteps = pic.procedureSteps.sort((a, b) => (a.stepOrder || 0) - (b.stepOrder || 0));
+        const midPoint = Math.ceil(sortedSteps.length / 2);
+        
+        // Left column steps
+        let stepLeftY = yPosition;
+        sortedSteps.slice(0, midPoint).forEach((step, index) => {
+          doc.setFont('helvetica', 'bold');
+          doc.text(`P${step.stepOrder || index + 1}:`, margin, stepLeftY);
+          doc.setFont('helvetica', 'normal');
+          const stepLines = doc.splitTextToSize(step.stepDescription || '', twoColumnWidth - 10);
+          doc.text(stepLines, margin + 6, stepLeftY);
+          stepLeftY += stepLines.length * lineHeight + compactSpacing;
+          doc.text(`Resp: ${getEmployeeName(step.responsible)}`, margin + 6, stepLeftY);
+          stepLeftY += lineHeight;
+          doc.text(`Fecha: ${formatDate(step.date) || 'N/A'}`, margin + 6, stepLeftY);
+          stepLeftY += lineHeight + compactSpacing;
+        });
+
+        // Right column steps
+        let stepRightY = yPosition;
+        sortedSteps.slice(midPoint).forEach((step, index) => {
+          doc.setFont('helvetica', 'bold');
+          doc.text(`P${step.stepOrder || midPoint + index + 1}:`, margin + twoColumnWidth + columnSpacing, stepRightY);
+          doc.setFont('helvetica', 'normal');
+          const stepLines = doc.splitTextToSize(step.stepDescription || '', twoColumnWidth - 10);
+          doc.text(stepLines, margin + twoColumnWidth + columnSpacing + 6, stepRightY);
+          stepRightY += stepLines.length * lineHeight + compactSpacing;
+          doc.text(`Resp: ${getEmployeeName(step.responsible)}`, margin + twoColumnWidth + columnSpacing + 6, stepRightY);
+          stepRightY += lineHeight;
+          doc.text(`Fecha: ${formatDate(step.date) || 'N/A'}`, margin + twoColumnWidth + columnSpacing + 6, stepRightY);
+          stepRightY += lineHeight + compactSpacing;
+        });
+
+        yPosition = Math.max(stepLeftY, stepRightY) + sectionSpacing;
+      }
+
+      // Validations and Documents - Two Columns (Validations on left)
+      const hasDocuments = pic.documents && pic.documents.length > 0;
+      const hasValidations = pic.validations && pic.validations.length > 0;
+      
+      if (hasDocuments || hasValidations) {
+        const sectionStartY = yPosition;
+        
+        // Left column - Validations
+        let valY = sectionStartY;
+        if (hasValidations) {
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Validación', margin, sectionStartY);
+          valY = sectionStartY + lineHeight + compactSpacing;
+          
+          doc.setFontSize(7);
+          pic.validations.forEach((val, index) => {
             doc.setFont('helvetica', 'bold');
-            doc.text(`Paso ${step.stepOrder || index + 1}:`, margin, yPosition);
-            yPosition += lineHeight;
-            
+            doc.text(`V${index + 1}:`, margin, valY);
             doc.setFont('helvetica', 'normal');
-            const stepLines = doc.splitTextToSize(step.stepDescription || '', pageWidth - margin * 2);
-            doc.text(stepLines, margin, yPosition);
-            yPosition += stepLines.length * lineHeight + 2;
-            
-            doc.text(`Responsable: ${getEmployeeName(step.responsible)}`, margin, yPosition);
-            yPosition += lineHeight;
-            doc.text(`Fecha: ${formatDate(step.date) || 'N/A'}`, margin, yPosition);
-            yPosition += lineHeight + 3;
+            const valLines = doc.splitTextToSize(val.validationDescription || '', twoColumnWidth - 10);
+            doc.text(valLines, margin + 6, valY);
+            valY += valLines.length * lineHeight + compactSpacing;
+            doc.text(`Resp: ${getEmployeeName(val.responsible)}`, margin + 6, valY);
+            valY += lineHeight;
+            doc.text(`Fecha: ${formatDate(val.date) || 'N/A'}`, margin + 6, valY);
+            valY += lineHeight + compactSpacing;
           });
-      }
+        } else {
+          valY = sectionStartY;
+        }
 
-      yPosition += sectionSpacing;
-
-      // Documents
-      if (pic.documents && pic.documents.length > 0) {
-        checkNewPage(lineHeight * 3);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Actualización/Revisión de Documentos Requerida', margin, yPosition);
-        yPosition += lineHeight + 3;
-
-        doc.setFontSize(10);
-        pic.documents.forEach((document) => {
-          checkNewPage(lineHeight * 3);
+        // Right column - Documents
+        let docY = sectionStartY;
+        if (hasDocuments) {
+          doc.setFontSize(9);
           doc.setFont('helvetica', 'bold');
-          doc.text(document.documentType || 'N/A', margin, yPosition);
-          yPosition += lineHeight;
+          doc.text('Documentos', margin + twoColumnWidth + columnSpacing, sectionStartY);
+          docY = sectionStartY + lineHeight + compactSpacing;
           
-          doc.setFont('helvetica', 'normal');
-          doc.text(`Responsable: ${getEmployeeName(document.responsible)}`, margin, yPosition);
-          yPosition += lineHeight;
-          doc.text(`Fecha: ${formatDate(document.date) || 'N/A'}`, margin, yPosition);
-          yPosition += lineHeight + 3;
-        });
+          doc.setFontSize(7);
+          pic.documents.forEach((document) => {
+            doc.setFont('helvetica', 'bold');
+            doc.text(`• ${document.documentType || 'N/A'}`, margin + twoColumnWidth + columnSpacing, docY);
+            doc.setFont('helvetica', 'normal');
+            docY += lineHeight;
+            doc.text(`Resp: ${getEmployeeName(document.responsible)}`, margin + twoColumnWidth + columnSpacing + 3, docY);
+            docY += lineHeight;
+            doc.text(`Fecha: ${formatDate(document.date) || 'N/A'}`, margin + twoColumnWidth + columnSpacing + 3, docY);
+            docY += lineHeight + compactSpacing;
+          });
+        } else {
+          docY = sectionStartY;
+        }
+
+        // Calculate max Y position to ensure no overlap with next section
+        yPosition = Math.max(valY, docY) + sectionSpacing;
       }
 
-      yPosition += sectionSpacing;
-
-      // Validations
-      if (pic.validations && pic.validations.length > 0) {
-        checkNewPage(lineHeight * 3);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Validación', margin, yPosition);
-        yPosition += lineHeight + 3;
-
-        doc.setFontSize(10);
-        pic.validations.forEach((val, index) => {
-          checkNewPage(lineHeight * 4);
-          doc.setFont('helvetica', 'bold');
-          doc.text(`Validación ${index + 1}:`, margin, yPosition);
-          yPosition += lineHeight;
-          
-          doc.setFont('helvetica', 'normal');
-          const valLines = doc.splitTextToSize(val.validationDescription || '', pageWidth - margin * 2);
-          doc.text(valLines, margin, yPosition);
-          yPosition += valLines.length * lineHeight + 2;
-          
-          doc.text(`Responsable: ${getEmployeeName(val.responsible)}`, margin, yPosition);
-          yPosition += lineHeight;
-          doc.text(`Fecha: ${formatDate(val.date) || 'N/A'}`, margin, yPosition);
-          yPosition += lineHeight + 3;
-        });
-      }
-
-      yPosition += sectionSpacing;
-
-      // Approvals
+      // Approvals - Multiple Columns Side by Side
       if (pic.approvals && pic.approvals.length > 0) {
-        checkNewPage(lineHeight * 3);
-        doc.setFontSize(14);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text('Aprobaciones Requeridas', margin, yPosition);
-        yPosition += lineHeight + 3;
+        doc.text('Aprobaciones', margin, yPosition);
+        yPosition += lineHeight + compactSpacing;
 
-        doc.setFontSize(10);
-        pic.approvals.forEach((approval) => {
-          checkNewPage(lineHeight * 4);
-          doc.setFont('helvetica', 'bold');
-          doc.text(`Aprobador: ${getEmployeeName(approval.approverId)}`, margin, yPosition);
-          yPosition += lineHeight;
+        doc.setFontSize(7);
+        const approvalStartY = yPosition;
+        const numColumns = 4; // Display in 4 columns
+        const approvalColumnWidth = (pageWidth - margin * 2 - columnSpacing * (numColumns - 1)) / numColumns;
+        const columnYPositions = Array(numColumns).fill(approvalStartY);
+        
+        pic.approvals.forEach((approval, index) => {
+          const columnIndex = index % numColumns;
+          const xPosition = margin + columnIndex * (approvalColumnWidth + columnSpacing);
+          let currentY = columnYPositions[columnIndex];
           
-          doc.setFont('helvetica', 'normal');
-          const status = approval.approvalStatus === 'approved' ? 'Aprobado' : 
-                        approval.approvalStatus === 'rejected' ? 'Rechazado' : 'Pendiente';
-          doc.text(`Estado: ${status}`, margin, yPosition);
-          yPosition += lineHeight;
+          doc.setFont('helvetica', 'bold');
+          const approverName = getEmployeeName(approval.approverId);
+          doc.text(`• ${approverName}`, xPosition, currentY);
+          currentY += lineHeight;
           
           if (approval.comment) {
-            const commentLines = doc.splitTextToSize(`Comentario: ${approval.comment}`, pageWidth - margin * 2);
-            doc.text(commentLines, margin, yPosition);
-            yPosition += commentLines.length * lineHeight;
+            doc.setFont('helvetica', 'normal');
+            const commentLines = doc.splitTextToSize(approval.comment, approvalColumnWidth - 5);
+            doc.text(commentLines, xPosition + 3, currentY);
+            currentY += commentLines.length * lineHeight;
           }
-          
           if (approval.approvalStatus?.toLowerCase() !== 'pending' && approval.responseDate) {
-            doc.text(`Fecha de Respuesta: ${new Date(approval.responseDate).toLocaleDateString('es-MX')}`, margin, yPosition);
-            yPosition += lineHeight;
+            doc.setFont('helvetica', 'normal');
+            doc.text(`F: ${new Date(approval.responseDate).toLocaleDateString('es-MX')}`, xPosition, currentY);
+            currentY += lineHeight;
           }
-          yPosition += 3;
+          currentY += compactSpacing;
+          columnYPositions[columnIndex] = currentY;
         });
+
+        // Move to next row after all approvals are complete
+        yPosition = Math.max(...columnYPositions) + sectionSpacing;
       }
 
-      yPosition += sectionSpacing;
-
-      // Availability
-      checkNewPage(lineHeight * 3);
-      doc.setFontSize(14);
+      // Availability and Change Reason - Two Columns (separate row below approvals)
+      const bottomRowY = yPosition;
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('Disponibilidad de:', margin, yPosition);
-      yPosition += lineHeight + 3;
-
-      doc.setFontSize(10);
+      doc.text('Disponibilidad:', margin, bottomRowY);
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       const availabilityItems = [];
       if (pic.availability?.fixtures) availabilityItems.push('Herrajes');
-      if (pic.availability?.testEquipment) availabilityItems.push('Equipo de Prueba');
+      if (pic.availability?.testEquipment) availabilityItems.push('Equipo Prueba');
       if (pic.availability?.other) availabilityItems.push(`Otro: ${pic.availability.other}`);
-      
-      if (availabilityItems.length > 0) {
-        availabilityItems.forEach(item => {
-          doc.text(`• ${item}`, margin + 5, yPosition);
-          yPosition += lineHeight;
-        });
-      } else {
-        doc.text('Ninguna', margin + 5, yPosition);
-        yPosition += lineHeight;
-      }
+      const availLines = doc.splitTextToSize(availabilityItems.length > 0 ? availabilityItems.join(', ') : 'Ninguna', twoColumnWidth - 30);
+      doc.text(availLines, margin + 25, bottomRowY);
+      const availHeight = availLines.length * lineHeight;
 
-      yPosition += sectionSpacing;
-
-      // Change Reason
-      checkNewPage(lineHeight * 3);
-      doc.setFontSize(14);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('Motivo del Cambio:', margin, yPosition);
-      yPosition += lineHeight + 3;
-
-      doc.setFontSize(10);
+      doc.text('Motivo Cambio:', margin + twoColumnWidth + columnSpacing, bottomRowY);
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       const changeReasons = [];
       if (pic.changeReason?.safety) changeReasons.push('Seguridad');
@@ -372,16 +382,11 @@ export default function PicDetailsView({ pic, isLoading }) {
       if (pic.changeReason?.cost) changeReasons.push('Costo');
       if (pic.changeReason?.process) changeReasons.push('Proceso');
       if (pic.changeReason?.other) changeReasons.push(`Otro: ${pic.changeReason.other}`);
-      
-      if (changeReasons.length > 0) {
-        changeReasons.forEach(reason => {
-          doc.text(`• ${reason}`, margin + 5, yPosition);
-          yPosition += lineHeight;
-        });
-      } else {
-        doc.text('Ninguno', margin + 5, yPosition);
-        yPosition += lineHeight;
-      }
+      const reasonLines = doc.splitTextToSize(changeReasons.length > 0 ? changeReasons.join(', ') : 'Ninguno', twoColumnWidth - 30);
+      doc.text(reasonLines, margin + twoColumnWidth + columnSpacing + 25, bottomRowY);
+      const reasonHeight = reasonLines.length * lineHeight;
+
+      yPosition = bottomRowY + Math.max(availHeight, reasonHeight) + compactSpacing;
 
       // Save PDF
       const fileName = `PIC_${pic.id || 'details'}_${new Date().toISOString().split('T')[0]}.pdf`;
