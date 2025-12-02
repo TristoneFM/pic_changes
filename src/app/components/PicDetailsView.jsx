@@ -192,7 +192,7 @@ export default function PicDetailsView({ pic, isLoading }) {
           ['Tipo Temp:', pic.temporaryType || 'N/A'],
           [`Número:`, pic.piecesTimeDateNumber || 'N/A']
         ] : []),
-        ['F. Originación:', formatDate(pic.originationDate) || 'N/A'],
+        ['F. Elaboración:', formatDate(pic.originationDate) || 'N/A'],
         ['F. Vencimiento:', formatDate(pic.implementationDate) || 'N/A'],
         ['Estado:', getStatusLabel(pic.status) || 'N/A'],
       ];
