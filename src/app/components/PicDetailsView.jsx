@@ -143,7 +143,7 @@ export default function PicDetailsView({ pic, isLoading }) {
                 logoDataUrl = reader.result;
                 const logoImg = new Image();
                 logoImg.onload = () => {
-                  logoWidth = 25; // Bigger logo
+                  logoWidth = 35; // Bigger logo
                   logoHeight = (logoImg.height / logoImg.width) * logoWidth;
                   resolve();
                 };
@@ -168,7 +168,7 @@ export default function PicDetailsView({ pic, isLoading }) {
       // Draw logo in top right corner of Información General section
       if (logoWidth > 0 && logoDataUrl) {
         const logoX = pageWidth - margin - logoWidth - boxPadding - 8; // Moved a little more to the left
-        const logoY = generalInfoStartY + boxPadding + 2; // Moved down
+        const logoY = generalInfoStartY + boxPadding; // Moved up
         doc.addImage(logoDataUrl, 'JPEG', logoX, logoY, logoWidth, logoHeight);
       }
       
