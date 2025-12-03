@@ -150,7 +150,7 @@ export default function PicDetailsView({ pic, isLoading }) {
       // Title - smaller font, centered with logo
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      const titleText = `Notificación de Cambio del Proceso | PIC No ${pic.id || 'N/A'}`;
+      const titleText = `Notificación de Cambio del Proceso | PIC No. ${pic.id || 'N/A'}`;
       
       // Calculate combined width of logo + spacing + title
       const titleWidth = doc.getTextWidth(titleText);
