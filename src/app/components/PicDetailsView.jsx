@@ -231,7 +231,7 @@ export default function PicDetailsView({ pic, isLoading }) {
       yPosition += Math.max(lineHeight, opsLines.length * lineHeight) + compactSpacing;
 
       doc.setFont('helvetica', 'bold');
-      doc.text('Motivo:', margin + boxPadding, yPosition);
+      doc.text('Solicitud:', margin + boxPadding, yPosition);
       doc.setFont('helvetica', 'normal');
       const motivoLines = doc.splitTextToSize(pic.revisionReason || 'N/A', pageWidth - margin * 2 - 35 - boxPadding * 2);
       doc.text(motivoLines, margin + 35 + boxPadding, yPosition);
@@ -459,7 +459,7 @@ export default function PicDetailsView({ pic, isLoading }) {
 
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('Motivo Cambio:', margin + twoColumnWidth + columnSpacing + boxPadding, yPosition);
+      doc.text('Motivo del Cambio:', margin + twoColumnWidth + columnSpacing + boxPadding, yPosition);
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       const changeReasons = [];
