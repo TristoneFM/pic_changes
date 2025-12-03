@@ -103,7 +103,7 @@ export default function PicDetailsView({ pic, isLoading }) {
     try {
       const doc = new jsPDF('p', 'mm', 'letter');
       const pageWidth = doc.internal.pageSize.getWidth();
-      let yPosition = 2; // Moved everything more up
+      let yPosition = 8; // Start lower to prevent cutoff
       const margin = 8;
       const lineHeight = 3.5;
       const sectionSpacing = 0; // No spacing between sections
@@ -113,7 +113,21 @@ export default function PicDetailsView({ pic, isLoading }) {
       const fourColumnWidth = (pageWidth - margin * 2 - columnSpacing * 3) / 4;
       const twoColumnWidth = (pageWidth - margin * 2 - columnSpacing) / 2;
 
-      // Add Tristone logo and title on same line, centered together
+      // Title - centered
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      const titleText = `Notificación de Cambio del Proceso | PIC No. ${pic.id || 'N/A'}`;
+      const titleWidth = doc.getTextWidth(titleText);
+      const titleX = (pageWidth - titleWidth) / 2;
+      const titleY = yPosition;
+      
+      // Draw title centered
+      doc.text(titleText, titleX, titleY, { align: 'left' });
+      
+      // Set yPosition below title
+      yPosition = titleY + lineHeight + compactSpacing;
+
+      // Load logo for use in Información General section
       let logoWidth = 0;
       let logoHeight = 0;
       let logoDataUrl = null;
@@ -129,7 +143,7 @@ export default function PicDetailsView({ pic, isLoading }) {
                 logoDataUrl = reader.result;
                 const logoImg = new Image();
                 logoImg.onload = () => {
-                  logoWidth = 12; // Smaller logo
+                  logoWidth = 25; // Bigger logo
                   logoHeight = (logoImg.height / logoImg.width) * logoWidth;
                   resolve();
                 };
@@ -147,34 +161,17 @@ export default function PicDetailsView({ pic, isLoading }) {
         // Continue without logo
       }
 
-      // Title - smaller font, centered with logo
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      const titleText = `Notificación de Cambio del Proceso | PIC No. ${pic.id || 'N/A'}`;
-      
-      // Calculate combined width of logo + spacing + title
-      const titleWidth = doc.getTextWidth(titleText);
-      const logoSpacing = 3;
-      const combinedWidth = logoWidth + logoSpacing + titleWidth;
-      
-      // Center the combined logo + title
-      const startX = (pageWidth - combinedWidth) / 2;
-      const titleY = yPosition + (logoHeight > 0 ? logoHeight / 2 + 1 : 0);
-      
-      // Draw logo if available
-      if (logoWidth > 0 && logoDataUrl) {
-        doc.addImage(logoDataUrl, 'JPEG', startX, yPosition, logoWidth, logoHeight);
-      }
-      
-      // Draw title next to logo
-      doc.text(titleText, startX + logoWidth + logoSpacing, titleY, { align: 'left' });
-      
-      // Set yPosition to the bottom of logo/title line
-      yPosition = Math.max(yPosition + logoHeight, titleY) + compactSpacing;
-
       // General Information Section - Four Columns (in box)
       const generalInfoStartY = yPosition;
       yPosition += boxPadding; // Add margin from top border
+      
+      // Draw logo in top right corner of Información General section
+      if (logoWidth > 0 && logoDataUrl) {
+        const logoX = pageWidth - margin - logoWidth - boxPadding - 8; // Moved a little more to the left
+        const logoY = generalInfoStartY + boxPadding + 2; // Moved down
+        doc.addImage(logoDataUrl, 'JPEG', logoX, logoY, logoWidth, logoHeight);
+      }
+      
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('Información General', margin + boxPadding, yPosition);
