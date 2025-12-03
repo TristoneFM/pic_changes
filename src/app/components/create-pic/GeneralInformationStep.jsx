@@ -121,7 +121,7 @@ export default function GeneralInformationStep({ formData, handleChange, errors 
           >
             <MenuItem value="Piezas">Piezas</MenuItem>
             <MenuItem value="Tiempo">Tiempo</MenuItem>
-            <MenuItem value="Fecha">Fecha</MenuItem>
+            {/*<MenuItem value="Fecha">Fecha</MenuItem>*/}
           </TextField>
           <TextField
             fullWidth

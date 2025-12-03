@@ -150,7 +150,7 @@ export default function PicDetailsView({ pic, isLoading }) {
       // Title - smaller font, centered with logo
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      const titleText = `Información del PIC No. ${pic.id || 'N/A'}`;
+      const titleText = `Notificación de Cambio del Proceso | PIC No ${pic.id || 'N/A'}`;
       
       // Calculate combined width of logo + spacing + title
       const titleWidth = doc.getTextWidth(titleText);
@@ -189,8 +189,8 @@ export default function PicDetailsView({ pic, isLoading }) {
         ...(pic.affectedPartNumbers === 'ciertos' && pic.partNumbersText ? [['NPs:', pic.partNumbersText]] : []),
         ['Desviacion Temporal'],
         ...(pic.temporaryPermanent === 'Temporal' ? [
-          ['Tipo Temp:', pic.temporaryType || 'N/A'],
-          [`Número:`, pic.piecesTimeDateNumber || 'N/A']
+          ['Tipo:', pic.temporaryType || 'N/A'],
+          [`Total:`, pic.piecesTimeDateNumber || 'N/A']
         ] : []),
         ['F. Elaboración:', formatDate(pic.originationDate) || 'N/A'],
         ['F. Vencimiento:', formatDate(pic.implementationDate) || 'N/A'],
