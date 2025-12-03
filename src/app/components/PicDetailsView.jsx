@@ -187,7 +187,7 @@ export default function PicDetailsView({ pic, isLoading }) {
         ['Plataforma:', pic.platform || 'N/A'],
         ['NPs afectados:', pic.affectedPartNumbers === 'todos' ? 'Todos' : pic.affectedPartNumbers === 'ciertos' ? 'Ciertos' : pic.affectedPartNumbers || 'N/A'],
         ...(pic.affectedPartNumbers === 'ciertos' && pic.partNumbersText ? [['NPs:', pic.partNumbersText]] : []),
-        ['Tipo:', pic.temporaryPermanent || 'N/A'],
+        ['Desviacion Temporal'],
         ...(pic.temporaryPermanent === 'Temporal' ? [
           ['Tipo Temp:', pic.temporaryType || 'N/A'],
           [`Número:`, pic.piecesTimeDateNumber || 'N/A']
