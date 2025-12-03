@@ -168,7 +168,7 @@ export default function PicDetailsView({ pic, isLoading }) {
       // Draw logo in top right corner of Información General section
       if (logoWidth > 0 && logoDataUrl) {
         const logoX = pageWidth - margin - logoWidth - boxPadding - 8; // Moved a little more to the left
-        const logoY = generalInfoStartY + boxPadding; // Moved up
+        const logoY = generalInfoStartY + boxPadding - 5; // Moved up a little more
         doc.addImage(logoDataUrl, 'JPEG', logoX, logoY, logoWidth, logoHeight);
       }
       
