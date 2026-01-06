@@ -113,21 +113,7 @@ export default function PicDetailsView({ pic, isLoading }) {
       const fourColumnWidth = (pageWidth - margin * 2 - columnSpacing * 3) / 4;
       const twoColumnWidth = (pageWidth - margin * 2 - columnSpacing) / 2;
 
-      // Title - centered
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      const titleText = `Notificación de Cambio del Proceso | PIC No. ${pic.id || 'N/A'}`;
-      const titleWidth = doc.getTextWidth(titleText);
-      const titleX = (pageWidth - titleWidth) / 2;
-      const titleY = yPosition;
-      
-      // Draw title centered
-      doc.text(titleText, titleX, titleY, { align: 'left' });
-      
-      // Set yPosition below title
-      yPosition = titleY + lineHeight + compactSpacing;
-
-      // Load logo for use in Información General section
+      // Load logo first
       let logoWidth = 0;
       let logoHeight = 0;
       let logoDataUrl = null;
@@ -143,7 +129,7 @@ export default function PicDetailsView({ pic, isLoading }) {
                 logoDataUrl = reader.result;
                 const logoImg = new Image();
                 logoImg.onload = () => {
-                  logoWidth = 35; // Bigger logo
+                  logoWidth = 15; // Smaller logo width
                   logoHeight = (logoImg.height / logoImg.width) * logoWidth;
                   resolve();
                 };
@@ -161,16 +147,33 @@ export default function PicDetailsView({ pic, isLoading }) {
         // Continue without logo
       }
 
+      // Title - centered
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      const titleText = `Notificación de Cambio del Proceso | PIC No. ${pic.id || 'N/A'}`;
+      const titleWidth = doc.getTextWidth(titleText);
+      const titleX = (pageWidth - titleWidth) / 2; // Centered title
+      const titleY = yPosition;
+      
+      // Position logo right next to the centered title (to the left)
+      const logoSpacing = 2; // Minimal space between logo and title
+      const logoX = titleX - logoWidth - logoSpacing; // Position logo to the left of centered title
+      const logoY = titleY - logoHeight / 2 + lineHeight / 2 - 4; // Move logo up more
+      
+      // Draw logo if available
+      if (logoWidth > 0 && logoDataUrl) {
+        doc.addImage(logoDataUrl, 'JPEG', logoX, logoY, logoWidth, logoHeight);
+      }
+      
+      // Draw title (centered)
+      doc.text(titleText, titleX, titleY, { align: 'left' });
+      
+      // Set yPosition below title
+      yPosition = titleY + lineHeight + compactSpacing;
+
       // General Information Section - Four Columns (in box)
       const generalInfoStartY = yPosition;
       yPosition += boxPadding; // Add margin from top border
-      
-      // Draw logo in top right corner of Información General section
-      if (logoWidth > 0 && logoDataUrl) {
-        const logoX = pageWidth - margin - logoWidth - boxPadding - 8; // Moved a little more to the left
-        const logoY = generalInfoStartY + boxPadding - 5; // Moved up a little more
-        doc.addImage(logoDataUrl, 'JPEG', logoX, logoY, logoWidth, logoHeight);
-      }
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');

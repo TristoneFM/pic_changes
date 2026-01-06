@@ -67,7 +67,7 @@ export default function CreatePicPage() {
   // Fetch PIC data if in edit mode
   const { data: picData, isLoading: isLoadingPicData } = useGetPic(picId);
   
-  // TanStack Query mutations
+  // TanStack Query mutations 
   const createPicMutation = useCreatePic();
   const updatePicMutation = useUpdatePic();
   
@@ -337,6 +337,49 @@ export default function CreatePicPage() {
   // Track previous area to handle changes
   const [previousAreaId, setPreviousAreaId] = useState(null);
   
+  // Helper function to get all responsible users from pasos, documentos, and validaciones
+  const getResponsibleUsersFromFields = useCallback(() => {
+    const responsibleIds = new Set();
+    
+    // Extract responsables from pasosProcedimiento
+    if (pasosProcedimiento && Array.isArray(pasosProcedimiento)) {
+      pasosProcedimiento.forEach(paso => {
+        if (paso.responsable && paso.responsable.trim() !== '') {
+          const empId = parseInt(paso.responsable);
+          if (!isNaN(empId) && empId > 0) {
+            responsibleIds.add(empId);
+          }
+        }
+      });
+    }
+    
+    // Extract responsables from documentos
+    if (documentos && Array.isArray(documentos)) {
+      documentos.forEach(doc => {
+        if (doc.responsable && doc.responsable.trim() !== '') {
+          const empId = parseInt(doc.responsable);
+          if (!isNaN(empId) && empId > 0) {
+            responsibleIds.add(empId);
+          }
+        }
+      });
+    }
+    
+    // Extract responsables from validaciones
+    if (validaciones && Array.isArray(validaciones)) {
+      validaciones.forEach(val => {
+        if (val.responsable && val.responsable.trim() !== '') {
+          const empId = parseInt(val.responsable);
+          if (!isNaN(empId) && empId > 0) {
+            responsibleIds.add(empId);
+          }
+        }
+      });
+    }
+    
+    return Array.from(responsibleIds);
+  }, [pasosProcedimiento, documentos, validaciones]);
+
   // Auto-populate mandatory approvers when area is selected
   useEffect(() => {
     if (areaAfectada && areas.length > 0) {
@@ -394,6 +437,36 @@ export default function CreatePicPage() {
       setPreviousAreaId(null);
     }
   }, [areaAfectada, areas, aprobacionesRequeridas, setValue, previousAreaId]);
+
+  // Auto-add responsible users from pasos, documentos, and validaciones to required approvals
+  useEffect(() => {
+    if (empleados.length === 0) return; // Wait for empleados to load
+    
+    const responsibleIds = getResponsibleUsersFromFields();
+    if (responsibleIds.length === 0) return;
+    
+    const currentApproverIds = aprobacionesRequeridas.map(a => a.emp_id);
+    const approversToAdd = [];
+    
+    responsibleIds.forEach(empId => {
+      if (!currentApproverIds.includes(empId)) {
+        const empleado = empleados.find(emp => emp.emp_id === empId);
+        if (empleado) {
+          approversToAdd.push({
+            emp_id: empId,
+            emp_alias: empleado.emp_alias || `Emp ${empId}`,
+          });
+        }
+      }
+    });
+    
+    if (approversToAdd.length > 0) {
+      setValue('aprobacionesRequeridas', [
+        ...aprobacionesRequeridas,
+        ...approversToAdd
+      ], { shouldValidate: false });
+    }
+  }, [pasosProcedimiento, documentos, validaciones, empleados, aprobacionesRequeridas, setValue, getResponsibleUsersFromFields]);
 
   // Map empleados to the format expected by the component
   // Each approver will have emp_id and emp_alias
@@ -557,11 +630,19 @@ export default function CreatePicPage() {
     // Prevent removing mandatory approvers
     const approverToRemove = aprobacionesRequeridas[index];
     if (approverToRemove) {
+      // Check if approver is mandatory from area configuration
       const selectedArea = areas.find(area => area.id.toString() === areaAfectada || area.name === areaAfectada);
       const mandatoryApproverIds = selectedArea?.approvers?.map(a => a.emp_id) || [];
       
       if (mandatoryApproverIds.includes(approverToRemove.emp_id)) {
-        // Don't allow removal of mandatory approvers
+        // Don't allow removal of mandatory approvers from area
+        return;
+      }
+      
+      // Check if approver is assigned to pasos, documentos, or validaciones
+      const responsibleIds = getResponsibleUsersFromFields();
+      if (responsibleIds.includes(approverToRemove.emp_id)) {
+        // Don't allow removal of approvers assigned to pasos/documentos/validaciones
         return;
       }
     }
@@ -733,7 +814,13 @@ export default function CreatePicPage() {
       case 4: {
         // Get mandatory approvers for selected area
         const selectedArea = areas.find(area => area.id.toString() === areaAfectada || area.name === areaAfectada);
-        const mandatoryApproverIds = selectedArea?.approvers?.map(a => a.emp_id) || [];
+        const areaMandatoryApproverIds = selectedArea?.approvers?.map(a => a.emp_id) || [];
+        
+        // Get obligatory approvers from pasos, documentos, and validaciones
+        const responsibleIds = getResponsibleUsersFromFields();
+        
+        // Combine both sets of mandatory/obligatory approvers
+        const allMandatoryApproverIds = [...new Set([...areaMandatoryApproverIds, ...responsibleIds])];
         
         return (
           <RequiredApprovalsStep
@@ -741,7 +828,7 @@ export default function CreatePicPage() {
             availableApprovers={aprobadoresDisponibles}
             handleAddApprover={handleAddAprobador}
             handleRemoveApprover={handleRemoveAprobador}
-            mandatoryApproverIds={mandatoryApproverIds}
+            mandatoryApproverIds={allMandatoryApproverIds}
           />
         );
       }
